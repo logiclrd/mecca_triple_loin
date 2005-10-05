@@ -1,6 +1,8 @@
 #ifndef PROGRAM_H
 #define PROGRAM_H
 
+#include "types.h"
+
 #ifndef STATEMENT_DATA_TYPE
 # define STATEMENT_DATA_TYPE void *
 #endif /* STATEMENT_DATA_TYPE */
@@ -28,7 +30,6 @@ typedef struct sExpressionListNode
 typedef struct sExpressionList
 {
   ExpressionListNode *First, *Last;
-  int Count;
 } ExpressionList;
 
 typedef enum eUnaryOperator
@@ -90,7 +91,7 @@ typedef struct sImmediateExpression
   Expression Expression;
 
   ImmediateType Type;
-  unsigned short Index;
+  ushort Index;
 } ImmediateExpression;
 
 typedef enum eStatementType
@@ -106,17 +107,28 @@ typedef enum eStatementType
   StatementType_Remember,
   StatementType_Abstain,
   StatementType_Reinstate,
-  StatementType_ReadIn,
-  StatementType_WriteOut,
+  StatementType_ReadOut,
+  StatementType_WriteIn,
   StatementType_ComeFrom,
 } StatementType;
 
 typedef struct sStatement
 {
-  int Label;
+  ushort Label;
   int Probability;
   StatementType Type;
 } Statement;
+
+typedef struct sStatementListNode
+{
+  struct sStatementListNode *Previous, *Next;
+  Statement *This;
+} StatementListNode;
+
+typedef struct sStatementList
+{
+  StatementListNode *First, *Last;
+} StatementList;
 
 typedef struct sBadStatement
 {
@@ -137,7 +149,7 @@ typedef struct sNextStatement
 {
   Statement Statement;
 
-  int Label;
+  ushort Label;
 } NextStatement;
 
 typedef struct sResumeStatement
@@ -203,7 +215,7 @@ typedef enum eGerund
 typedef struct sGerundListNode
 {
   struct sGerundListNode *Previous, *Next;
-  Gerund *This;
+  Gerund This;
 } GerundListNode;
 
 typedef struct sGerundList
@@ -244,7 +256,53 @@ typedef struct sComeFromStatement
 {
   Statement Statement;
 
-  int Label;
+  ushort Label;
 } ComeFromStatement;
 
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+ExpressionList new_ExpressionList();
+void ExpressionList_Add(ExpressionList *list, Expression *item);
+int ExpressionList_Count(ExpressionList *list);
+void ExpressionList_Unlink(ExpressionList *list, ExpressionListNode *node);
+UnaryOperator lookup_UnaryOperator(char op);
+UnaryExpression *new_UnaryExpression(UnaryOperator unary_operator, Expression *inner);
+BinaryOperator lookup_BinaryOperator(char op);
+BinaryExpression *new_BinaryExpression(Expression *left, BinaryOperator binary_operator, Expression *right);
+SubscriptExpression *new_SubscriptExpression(Expression *array, ExpressionList subscripts);
+DimensionExpression *new_DimensionExpression(ExpressionList sizes);
+ImmediateType lookup_ImmediateType(char type);
+ImmediateExpression *new_ImmediateExpression(ImmediateType type, ushort index);
+ImmediateExpression *make_onespot(ushort index);
+ImmediateExpression *make_twospot(ushort index);
+ImmediateExpression *make_tail(ushort index);
+ImmediateExpression *make_hybrid(ushort index);
+ImmediateExpression *make_mesh(ushort index);
+StatementList new_StatementList();
+void StatementList_Add(StatementList *list, Statement *item);
+int StatementList_Count(StatementList *list);
+void StatementList_Unlink(StatementList *list, StatementListNode *node);
+Statement make_statement_header(int label, int probability);
+BadStatement *new_BadStatement(Statement header, char *text);
+AssignmentStatement *new_AssignmentStatement(Statement header, Expression *target, Expression *value);
+NextStatement *new_NextStatement(Statement header, ushort label);
+ResumeStatement *new_ResumeStatement(Statement header, Expression *count);
+ForgetStatement *new_ForgetStatement(Statement header, Expression *count);
+StashStatement *new_StashStatement(Statement header, ExpressionList variables);
+RetrieveStatement *new_RetrieveStatement(Statement header, ExpressionList variables);
+IgnoreStatement *new_IgnoreStatement(Statement header, ExpressionList variables);
+RememberStatement *new_RememberStatement(Statement header, ExpressionList variables);
+GerundList new_GerundList();
+void GerundList_Add(GerundList *list, Gerund item);
+int GerundList_Count(GerundList *list);
+void GerundList_Unlink(GerundList *list, GerundListNode *node);
+AbstainStatement *new_AbstainStatement(Statement header, GerundList gerunds);
+ReinstateStatement *new_ReinstateStatement(Statement header, GerundList gerunds);
+ReadOutStatement *new_ReadOutStatement(Statement header, Expression *value);
+WriteInStatement *new_WriteInStatement(Statement header, Expression *target);
+ComeFromStatement *new_ComeFromStatement(Statement header, ushort Label);
+
 #endif /* PROGRAM_H */
+
