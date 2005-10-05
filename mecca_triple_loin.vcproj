@@ -133,6 +133,9 @@
 				RelativePath=".\fuckup.h">
 			</File>
 			<File
+				RelativePath=".\parser.h">
+			</File>
+			<File
 				RelativePath=".\program.h">
 			</File>
 			<File
