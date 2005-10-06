@@ -427,14 +427,12 @@ ReinstateStatement *new_ReinstateStatement(Statement header, GerundList gerunds)
   return ret;
 }
 
-ReadOutStatement *new_ReadOutStatement(Statement header, Expression *value)
+GiveUpStatement *new_GiveUpStatement(Statement header)
 {
-  ReadOutStatement *ret = alloc(ReadOutStatement);
+  GiveUpStatement *ret = alloc(GiveUpStatement);
 
-  header.Type = StatementType_ReadOut;
+  header.Type = StatementType_GiveUp;
   ret->Statement = header;
-
-  ret->Value = value;
 
   return ret;
 }
@@ -447,6 +445,18 @@ WriteInStatement *new_WriteInStatement(Statement header, Expression *target)
   ret->Statement = header;
 
   ret->Target = target;
+
+  return ret;
+}
+
+ReadOutStatement *new_ReadOutStatement(Statement header, Expression *value)
+{
+  ReadOutStatement *ret = alloc(ReadOutStatement);
+
+  header.Type = StatementType_ReadOut;
+  ret->Statement = header;
+
+  ret->Value = value;
 
   return ret;
 }

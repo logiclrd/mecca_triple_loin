@@ -368,6 +368,28 @@ static Token pull_token(char **buf_ptr, int *row, int *column)
 #undef QUO
 }
 
+static bool is_lvalue(Expression *expression)
+{
+  switch (expression->Type)
+  {
+    case ExpressionType_Immediate:
+    {
+      ImmediateExpression *immediate = (ImmediateExpression *)expression;
+
+      switch (immediate->Type)
+      {
+        case ImmediateType_OneSpot:
+        case ImmediateType_TwoSpot:
+        case ImmediateType_Tail:
+        case ImmediateType_Hybrid:  return true;
+      }
+    }
+    case ExpressionType_Subscript: return true;
+
+    default: return false;
+  }
+}
+
 static Expression *parse_expression(Token *tokens, int token_count)
 {
   int bracket_level = 0;
@@ -375,7 +397,7 @@ static Expression *parse_expression(Token *tokens, int token_count)
   static TokenType *bracket_type_stack = bracket_type_stack_prealloc;
   static int bracket_type_stack_size = 100;
   bool uniform_brackets = true;
-  int operator_index = -1;
+  int operator_index = -1, by_index = -1, sub_index = -1;
   ImmediateType immediate_type;
   bool have_unary_operator;
   UnaryOperator unary_operator;
@@ -423,6 +445,14 @@ static Expression *parse_expression(Token *tokens, int token_count)
         case TokenType_Select:
           new_operator_index = i;
           break;
+        case TokenType_Sub:
+          if (sub_index < 0)
+            sub_index = i;
+          break;
+        case TokenType_By:
+          if (by_index < 0)
+            by_index = i;
+          break;
       }
 
       if (new_operator_index >= 0)
@@ -434,6 +464,10 @@ static Expression *parse_expression(Token *tokens, int token_count)
       }
     }
   }
+
+  if ((operator_index >= 0)
+   && ((sub_index >= 0) || (by_index >= 0)))
+    return NULL; // ambiguity
 
   if (uniform_brackets)
   {
@@ -481,6 +515,69 @@ static Expression *parse_expression(Token *tokens, int token_count)
       left,
       lookup_BinaryOperator(tokens[operator_index].Value),
       right);
+
+    return &expression->Expression;
+  }
+
+  if (by_index >= 0)
+  {
+    ExpressionList dimensions = new_ExpressionList();
+    DimensionExpression *expression;
+    Expression *one_dimension;
+    int expression_start = 0;
+
+    while (by_index <= token_count)
+    {
+      one_dimension = parse_expression(&tokens[expression_start], by_index - expression_start);
+
+      if (one_dimension == NULL)
+        return NULL;
+
+      ExpressionList_Add(&dimensions, one_dimension);
+
+      expression_start = ++by_index;
+      while ((by_index < token_count) && (tokens[by_index].Type != TokenType_By))
+        by_index++;
+    }
+
+    expression = new_DimensionExpression(dimensions);
+
+    return &expression->Expression;
+  }
+
+  if (sub_index >= 0)
+  {
+    SubscriptExpression *expression;
+    Expression *array;
+    ExpressionList subscripts = new_ExpressionList();
+    Expression *one_subscript;
+
+    int expression_start;
+
+    array = parse_expression(tokens, sub_index);
+
+    if (array == NULL)
+      return NULL;
+
+    expression_start = ++sub_index;
+    while ((sub_index < token_count) && (tokens[sub_index].Type != TokenType_Sub))
+      sub_index++;
+
+    while (sub_index <= token_count)
+    {
+      one_subscript = parse_expression(&tokens[expression_start], by_index - expression_start);
+
+      if (one_subscript == NULL)
+        return NULL;
+
+      ExpressionList_Add(&subscripts, one_subscript);
+
+      expression_start = ++sub_index;
+      while ((sub_index < token_count) && (tokens[sub_index].Type != TokenType_Sub))
+        sub_index++;
+    }
+
+    expression = new_SubscriptExpression(array, subscripts);
 
     return &expression->Expression;
   }
@@ -848,17 +945,15 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Read: // READ OUT expr
+    case TokenType_Give: // GIVE UP
     {
-      ReadOutStatement *statement;
-      
-      Expression *expression = parse_expression(&tokens[next_token + 2], token_count - (next_token + 2));
+      GiveUpStatement *statement;
 
-      if ((tokens[next_token + 1].Type != TokenType_Out)
-       || (expression == NULL))
+      if ((tokens[next_token + 1].Type != TokenType_Up)
+       || (next_token + 2 < token_count))
         return false;
 
-      statement = new_ReadOutStatement(header, expression);
+      statement = new_GiveUpStatement(header);
       item = &statement->Statement;
 
       break;
@@ -870,12 +965,26 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
       Expression *expression = parse_expression(&tokens[next_token + 2], token_count - (next_token + 2));
 
       if ((tokens[next_token + 1].Type != TokenType_In)
+       || (expression == NULL)
+       || !is_lvalue(expression))
+        return false;
+
+      statement = new_WriteInStatement(header, expression);
+      item = &statement->Statement;
+
+      break;
+    }
+    case TokenType_Read: // READ OUT expr
+    {
+      ReadOutStatement *statement;
+      
+      Expression *expression = parse_expression(&tokens[next_token + 2], token_count - (next_token + 2));
+
+      if ((tokens[next_token + 1].Type != TokenType_Out)
        || (expression == NULL))
         return false;
 
-      // TODO: verify that 'expression' is an L-value
-
-      statement = new_WriteInStatement(header, expression);
+      statement = new_ReadOutStatement(header, expression);
       item = &statement->Statement;
 
       break;
@@ -913,10 +1022,9 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
       value = parse_expression(&tokens[gets_index + 1], token_count - (gets_index + 1));
 
       if ((target == NULL)
-       || (value == NULL))
+       || (value == NULL)
+       || !is_lvalue(target))
         return false;
-
-      // TODO: verify that 'target' is an L-value
 
       statement = new_AssignmentStatement(header, target, value);
       item = &statement->Statement;
@@ -946,6 +1054,13 @@ static void parse_line(StatementList *list, char *line, int line_length, int *ro
   {
     tokens[token_offset++] = pull_token(&line_ptr, row, column);
 
+    if ((tokens[token_offset - 1].Type == TokenType_UnmatchedChar)
+     && (tokens[token_offset - 1].Value == 0))
+    {
+      token_offset--;
+      break;
+    }
+
     if (token_offset == token_count)
     {
       int new_token_count = token_count * 2;
@@ -960,6 +1075,9 @@ static void parse_line(StatementList *list, char *line, int line_length, int *ro
       token_count = new_token_count;
     }
   }
+
+  if (token_offset == 0)
+    return; // it is not shameful to have empty statements
 
   tokens[token_offset].Type = TokenType_InvalidToken;
 

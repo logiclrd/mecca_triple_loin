@@ -107,8 +107,9 @@ typedef enum eStatementType
   StatementType_Remember,
   StatementType_Abstain,
   StatementType_Reinstate,
-  StatementType_ReadOut,
+  StatementType_GiveUp,
   StatementType_WriteIn,
+  StatementType_ReadOut,
   StatementType_ComeFrom,
 } StatementType;
 
@@ -242,12 +243,10 @@ typedef struct sReinstateStatement
   GerundList Gerunds;
 } ReinstateStatement;
 
-typedef struct sReadOutStatement
+typedef struct sGiveUpStatement
 {
   Statement Statement;
-
-  Expression *Value;
-} ReadOutStatement;
+} GiveUpStatement;
 
 typedef struct sWriteInStatement
 {
@@ -255,6 +254,13 @@ typedef struct sWriteInStatement
 
   Expression *Target;
 } WriteInStatement;
+
+typedef struct sReadOutStatement
+{
+  Statement Statement;
+
+  Expression *Value;
+} ReadOutStatement;
 
 typedef struct sComeFromStatement
 {
@@ -304,8 +310,9 @@ int GerundList_Count(GerundList *list);
 void GerundList_Unlink(GerundList *list, GerundListNode *node);
 AbstainStatement *new_AbstainStatement(Statement header, GerundList gerunds);
 ReinstateStatement *new_ReinstateStatement(Statement header, GerundList gerunds);
-ReadOutStatement *new_ReadOutStatement(Statement header, Expression *value);
+GiveUpStatement *new_GiveUpStatement(Statement header);
 WriteInStatement *new_WriteInStatement(Statement header, Expression *target);
+ReadOutStatement *new_ReadOutStatement(Statement header, Expression *value);
 ComeFromStatement *new_ComeFromStatement(Statement header, ushort Label);
 
 #endif /* PROGRAM_H */
