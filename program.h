@@ -114,9 +114,12 @@ typedef enum eStatementType
 
 typedef struct sStatement
 {
+  StatementType Type;
   ushort Label;
   int Probability;
-  StatementType Type;
+  bool Polite;
+  int ErrorCode;
+  int NextStatementRow; // for strict error message compatibility
 } Statement;
 
 typedef struct sStatementListNode
@@ -210,6 +213,7 @@ typedef enum eGerund
   Gerund_ReadingOut,
   Gerund_WritingIn,
   Gerund_ComingFrom,
+  NumGerunds
 } Gerund;
 
 typedef struct sGerundListNode
@@ -284,7 +288,7 @@ StatementList new_StatementList();
 void StatementList_Add(StatementList *list, Statement *item);
 int StatementList_Count(StatementList *list);
 void StatementList_Unlink(StatementList *list, StatementListNode *node);
-Statement make_statement_header(int label, int probability);
+Statement make_statement_header(int label, int probability, bool polite, int next_statement_row);
 BadStatement *new_BadStatement(Statement header, char *text);
 AssignmentStatement *new_AssignmentStatement(Statement header, Expression *target, Expression *value);
 NextStatement *new_NextStatement(Statement header, ushort label);

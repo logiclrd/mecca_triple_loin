@@ -89,3 +89,64 @@ void complain(int code, char *message, char *line, int line_number, int column)
   longjmp(error_exit_jmp_buf, code);
 }
 
+typedef struct sCode
+{
+  int Value;
+  const char *Message;
+} Code;
+
+// note: not all of these are used
+Code codes[] =
+{
+  {   0, "%s" },
+  {  17, "DO YOU EXPECT ME TO UNDERSTAND THIS?!:\n\n%s\n\n" },
+  {  79, "THE PROGRAMMER IS INSUFFICIENTLY POLITE" },
+  {  99, "THE PROGRAMMER IS OVERLY POLITE" },
+  { 123, "THE PROGRAM HAS GOTTEN LOST IN THE STACKS" },
+  { 129, "THE PROGRAM FELL OFF THE LINE" },
+  { 139, "THE PROGRAM IS SENILE" },
+  { 182, "THE PROGRAMMER IS FORGETFUL" },
+  { 197, "THE LABEL LACKS ADHESION" },
+  { 200, "YOU CANNOT SEE WHAT DOES NOT EXIST" },
+  { 240, "YOU CAN'T CREATE NOTHING" },
+  { 241, "NUMBERS MAY NOT BE SUBDIVIDED" },
+  { 275, "THE PROGRAMMER HAS JOHNNY COCHRANNED A ONESPOT" },
+  { 436, "THROW STICK BEFORE RETRIEVING" },
+  { 533, "THE PROGRAMMER HAS JOHNNY COCHRANNED A TWOSPOT" },
+  { 562, "DATUM SOURCE HAS RUN DRY" },
+  { 579, "THE INPUT IS SEMANTICALLY IMPAIRED" },
+  { 621, "NOTHING HAPPENS WHEN YOU DO SOMETHING 0 TIMES" },
+  { 632, "YOU WENT TOO FAR THIS TIME" },
+  { 633, "YOU FELL TOO FAR THIS TIME" },
+  { 774, "COMPILER-GENERATED ENTROPY INJECTION" },
+  { 778, "I TOOK THE WRONG PATH" },
+  // C-INTERCAL extensions:
+  { 111, "COMPLY WITH THE STANDARD YOU TURKEY" },
+  { 127, "SYSTEM CORE GOT LOST" },
+  { 222, "YOU CAN'T HIDE AND YOU MAY NO LONGER RUN" },
+  { 333, "I HAVE A HEADACHE" },
+  { 444, "DO NOT INVITE EVIL" },
+  { 555, "QUANTUM PROBABILITY FIELDS ARE PROHIBITED" },
+  { 666, "SUBSTRATE COLLAPSED UNDER WEIGHT OF SEQUENCE" },
+  { 777, "UNABLE TO CONJURE FROM THE VOID THE GURU'S INTENTION" },
+  { 888, "OPERATION DAMAGED BY HOSTILE ENVIRONMENT" },
+  { 999, "STRUCTURAL INTEGRITY COMPROMISED" },
+  { 998, "SYSTEMATIC NOMENCLATURE FAILURE" },
+  { 997, "YOU ARE ON THE WRONG BASE, ENSIGN" },
+  // MTL extensions:
+  {  33, "THE IMPROBABLE IS WHAT USUALLY HAPPENS" },
+
+  // end of list:
+  { -1, NULL }
+};
+
+const char *error_code_to_string(int code)
+{
+  int i;
+
+  for (i=0; codes[i].Value >= 0; i++)
+    if (codes[i].Value == code)
+      return codes[i].Message;
+
+  return "BAD LUCK IN MODULE F-E-C-T-S";
+}

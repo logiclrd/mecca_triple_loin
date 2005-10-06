@@ -231,12 +231,15 @@ void StatementList_Unlink(StatementList *list, StatementListNode *node)
   free(node);
 }
 
-Statement make_statement_header(int label, int probability)
+Statement make_statement_header(int label, int probability, bool polite, int next_statement_row)
 {
   Statement ret;
 
   ret.Label = label;
   ret.Probability = probability;
+  ret.Polite = polite;
+  ret.NextStatementRow = next_statement_row;
+  ret.ErrorCode = 0;
 
   return ret;
 }
