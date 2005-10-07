@@ -5,6 +5,7 @@ typedef enum { false, true } bool;
 
 typedef unsigned int uint;
 typedef unsigned short ushort;
+typedef unsigned char uchar;
 
 #define alloc(type) ((type *)malloc(sizeof(type)))
 

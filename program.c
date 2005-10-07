@@ -145,7 +145,7 @@ ImmediateExpression *new_ImmediateExpression(ImmediateType type, ushort index)
 {
   ImmediateExpression *ret = alloc(ImmediateExpression);
 
-  if (index == 0)
+  if ((index == 0) && (type != ImmediateType_Mesh))
     explode("BAD LUCK IN MODULE P-N-I-E");
 
   ret->Expression.Type = ExpressionType_Immediate;

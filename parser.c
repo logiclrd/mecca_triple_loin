@@ -76,7 +76,7 @@ typedef struct sToken
   int Value;
 } Token;
 
-static Token pull_token(char **buf_ptr, int *row, int *column)
+static Token pull_token(uchar **buf_ptr, int *row, int *column)
 {
 #define QUO '\''
   Token ret;
@@ -104,151 +104,151 @@ static Token pull_token(char **buf_ptr, int *row, int *column)
   switch (**buf_ptr)
   {
     // symbols:
-    case '%': ++*buf_ptr; ret.Type = TokenType_007;           break;
-    case '&': ++*buf_ptr; ret.Type = TokenType_And;           break;
-    case '"': ++*buf_ptr; ret.Type = TokenType_Ears;          break;
+    case '%': ++*buf_ptr; ++*column; ret.Type = TokenType_007;           break;
+    case '&': ++*buf_ptr; ++*column; ret.Type = TokenType_And;           break;
+    case '"': ++*buf_ptr; ++*column; ret.Type = TokenType_Ears;          break;
     case '<':
       if ((*buf_ptr)[1] == '-')
       {
-        (*buf_ptr) += 2;
+        (*buf_ptr) += 2; (*column) += 2;
         ret.Type = TokenType_Gets;
       }
       break;
-    case ';': ++*buf_ptr; ret.Type = TokenType_Hybrid;        break;
-    case '+': ++*buf_ptr; ret.Type = TokenType_Intersection;  break;
-    case '#': ++*buf_ptr; ret.Type = TokenType_Mesh;          break;
+    case ';': ++*buf_ptr; ++*column; ret.Type = TokenType_Hybrid;        break;
+    case '+': ++*buf_ptr; ++*column; ret.Type = TokenType_Intersection;  break;
+    case '#': ++*buf_ptr; ++*column; ret.Type = TokenType_Mesh;          break;
     case '/':
-    case '$': ++*buf_ptr; ret.Type = TokenType_Mingle;        break;
-    case '.': ++*buf_ptr; ret.Type = TokenType_OneSpot;       break;
+    case '$': ++*buf_ptr; ++*column; ret.Type = TokenType_Mingle;        break;
+    case '.': ++*buf_ptr; ++*column; ret.Type = TokenType_OneSpot;       break;
     case 'v':
-    case 'V': ++*buf_ptr; ret.Type = TokenType_Or;            break;
-    case '(': ++*buf_ptr; ret.Type = TokenType_ParenLeft;     break;
-    case ')': ++*buf_ptr; ret.Type = TokenType_ParenRight;    break;
-    case '~': ++*buf_ptr; ret.Type = TokenType_Select;        break;
-    case QUO: ++*buf_ptr; ret.Type = TokenType_Spark;         break;
-    case '*': ++*buf_ptr; ret.Type = TokenType_Splat;         break;
-    case ',': ++*buf_ptr; ret.Type = TokenType_Tail;          break;
-    case ':': ++*buf_ptr; ret.Type = TokenType_TwoSpot;       break;
-    case '?': ++*buf_ptr; ret.Type = TokenType_XOr;           break;
+    case 'V': ++*buf_ptr; ++*column; ret.Type = TokenType_Or;            break;
+    case '(': ++*buf_ptr; ++*column; ret.Type = TokenType_ParenLeft;     break;
+    case ')': ++*buf_ptr; ++*column; ret.Type = TokenType_ParenRight;    break;
+    case '~': ++*buf_ptr; ++*column; ret.Type = TokenType_Select;        break;
+    case QUO: ++*buf_ptr; ++*column; ret.Type = TokenType_Spark;         break;
+    case '*': ++*buf_ptr; ++*column; ret.Type = TokenType_Splat;         break;
+    case ',': ++*buf_ptr; ++*column; ret.Type = TokenType_Tail;          break;
+    case ':': ++*buf_ptr; ++*column; ret.Type = TokenType_TwoSpot;       break;
+    case '?': ++*buf_ptr; ++*column; ret.Type = TokenType_XOr;           break;
     // words:
     case 'a': case 'A':
       if (substr_equal_nocase(*buf_ptr, "ABSTAINING", 10))
       {
-        (*buf_ptr) += 7;
+        (*buf_ptr) += 7; (*column) += 7;
         ret.Type = TokenType_Abstaining;
       }
       else if (substr_equal_nocase(*buf_ptr, "ABSTAIN", 7))
       {
-        (*buf_ptr) += 7;
+        (*buf_ptr) += 7; (*column) += 7;
         ret.Type = TokenType_Abstain;
       }
       else if (substr_equal_nocase(*buf_ptr, "ASSIGNING", 9))
       {
-        (*buf_ptr) += 9;
+        (*buf_ptr) += 9; (*column) += 9;
         ret.Type = TokenType_Assigning;
       }
       break;
     case 'b': case 'B':
       if (((*buf_ptr)[1] == 'y') || ((*buf_ptr)[1] == 'Y'))
       {
-        (*buf_ptr) += 2;
+        (*buf_ptr) += 2; (*column) += 2;
         ret.Type = TokenType_By;
       }
       break;
     case 'c': case 'C':
       if (substr_equal_nocase(*buf_ptr, "CALCULATING", 11))
       {
-        (*buf_ptr) += 11;
+        (*buf_ptr) += 11; (*column) += 11;
         ret.Type = TokenType_Calculating;
       }
       else if (substr_equal_nocase(*buf_ptr, "COME", 4))
       {
-        (*buf_ptr) += 4;
+        (*buf_ptr) += 4; (*column) += 4;
         ret.Type = TokenType_Come;
       }
       else if (substr_equal_nocase(*buf_ptr, "COMING", 6))
       {
-        (*buf_ptr) += 6;
+        (*buf_ptr) += 6; (*column) += 6;
         ret.Type = TokenType_Coming;
       }
       break;
     case 'd': case 'D':
       if (((*buf_ptr)[1] == 'o') || ((*buf_ptr)[1] == 'O'))
       {
-        (*buf_ptr) += 2;
+        (*buf_ptr) += 2; (*column) += 2;
         ret.Type = TokenType_Do;
       }
       break;
     case 'f': case 'F':
       if (substr_equal_nocase(*buf_ptr, "FORGETTING", 10))
       {
-        (*buf_ptr) += 10;
+        (*buf_ptr) += 10; (*column) += 10;
         ret.Type = TokenType_Forgetting;
       }
       if (substr_equal_nocase(*buf_ptr, "FORGET", 6))
       {
-        (*buf_ptr) += 6;
+        (*buf_ptr) += 6; (*column) += 6;
         ret.Type = TokenType_Forget;
       }
       else if (substr_equal_nocase(*buf_ptr, "FROM", 4))
       {
-        (*buf_ptr) += 4;
+        (*buf_ptr) += 4; (*column) += 4;
         ret.Type = TokenType_From;
       }
       break;
     case 'g': case 'G':
       if (substr_equal_nocase(*buf_ptr, "GIVE", 4))
       {
-        (*buf_ptr) += 4;
+        (*buf_ptr) += 4; (*column) += 4;
         ret.Type = TokenType_Give;
       }
       break;
     case 'i': case 'I':
       if (substr_equal_nocase(*buf_ptr, "IGNORE", 6))
       {
-        (*buf_ptr) += 6;
+        (*buf_ptr) += 6; (*column) += 6;
         ret.Type = TokenType_Ignore;
       }
       else if (substr_equal_nocase(*buf_ptr, "IGNORING", 8))
       {
-        (*buf_ptr) += 8;
+        (*buf_ptr) += 8; (*column) += 8;
         ret.Type = TokenType_Ignoring;
       }
       else if (((*buf_ptr)[1] == 'n') || ((*buf_ptr)[1] == 'N'))
       {
-        (*buf_ptr) += 2;
+        (*buf_ptr) += 2; (*column) += 2;
         ret.Type = TokenType_In;
       }
       break;
     case 'n': case 'N':
       if (substr_equal_nocase(*buf_ptr, "NEXTING", 7))
       {
-        (*buf_ptr) += 7;
+        (*buf_ptr) += 7; (*column) += 7;
         ret.Type = TokenType_Nexting;
       }
       if (substr_equal_nocase(*buf_ptr, "NEXT", 4))
       {
-        (*buf_ptr) += 4;
+        (*buf_ptr) += 4; (*column) += 4;
         ret.Type = TokenType_Next;
       }
       else if (substr_equal_nocase(*buf_ptr, "NOT", 3)
             || substr_equal_nocase(*buf_ptr, "N'T", 3))
       {
-        (*buf_ptr) += 3;
+        (*buf_ptr) += 3; (*column) += 3;
         ret.Type = TokenType_Not;
       }
       break;
     case 'o': case 'O':
       if (substr_equal_nocase(*buf_ptr, "OUT", 3))
       {
-        (*buf_ptr) += 3;
+        (*buf_ptr) += 3; (*column) += 3;
         ret.Type = TokenType_Out;
       }
       break;
     case 'p': case 'P':
       if (substr_equal_nocase(*buf_ptr, "PLEASE", 6))
       {
-        (*buf_ptr) += 6;
+        (*buf_ptr) += 6; (*column) += 6;
         ret.Type = TokenType_Please;
       }
       break;
@@ -257,88 +257,88 @@ static Token pull_token(char **buf_ptr, int *row, int *column)
         break;
       if (substr_equal_nocase(*buf_ptr, "READING", 7))
       {
-        (*buf_ptr) += 7;
+        (*buf_ptr) += 7; (*column) += 7;
         ret.Type = TokenType_Reading;
       }
       else if (substr_equal_nocase(*buf_ptr, "READ", 4))
       {
-        (*buf_ptr) += 4;
+        (*buf_ptr) += 4; (*column) += 4;
         ret.Type = TokenType_Read;
       }
       else if (substr_equal_nocase(*buf_ptr, "REINSTATE", 9))
       {
-        (*buf_ptr) += 9;
+        (*buf_ptr) += 9; (*column) += 9;
         ret.Type = TokenType_Reinstate;
       }
       else if (substr_equal_nocase(*buf_ptr, "REINSTATING", 11))
       {
-        (*buf_ptr) += 11;
+        (*buf_ptr) += 11; (*column) += 11;
         ret.Type = TokenType_Reinstating;
       }
       else if (substr_equal_nocase(*buf_ptr, "REMEMBERING", 11))
       {
-        (*buf_ptr) += 11;
+        (*buf_ptr) += 11; (*column) += 11;
         ret.Type = TokenType_Remembering;
       }
       else if (substr_equal_nocase(*buf_ptr, "REMEMBER", 8))
       {
-        (*buf_ptr) += 8;
+        (*buf_ptr) += 8; (*column) += 8;
         ret.Type = TokenType_Remember;
       }
       else if (substr_equal_nocase(*buf_ptr, "RESUME", 6))
       {
-        (*buf_ptr) += 6;
+        (*buf_ptr) += 6; (*column) += 6;
         ret.Type = TokenType_Resume;
       }
       else if (substr_equal_nocase(*buf_ptr, "RESUMING", 8))
       {
-        (*buf_ptr) += 8;
+        (*buf_ptr) += 8; (*column) += 8;
         ret.Type = TokenType_Resuming;
       }
       else if (substr_equal_nocase(*buf_ptr, "RETRIEVE", 8))
       {
-        (*buf_ptr) += 8;
+        (*buf_ptr) += 8; (*column) += 8;
         ret.Type = TokenType_Retrieve;
       }
       else if (substr_equal_nocase(*buf_ptr, "RETRIEVING", 10))
       {
-        (*buf_ptr) += 10;
+        (*buf_ptr) += 10; (*column) += 10;
         ret.Type = TokenType_Retrieving;
       }
       break;
     case 's': case 'S':
       if (substr_equal_nocase(*buf_ptr, "STASHING", 8))
       {
-        (*buf_ptr) += 8;
+        (*buf_ptr) += 8; (*column) += 8;
         ret.Type = TokenType_Stashing;
       }
       else if (substr_equal_nocase(*buf_ptr, "STASH", 5))
       {
-        (*buf_ptr) += 5;
+        (*buf_ptr) += 5; (*column) += 5;
         ret.Type = TokenType_Stash;
       }
       else if (substr_equal_nocase(*buf_ptr, "SUB", 3))
       {
-        (*buf_ptr) += 3;
+        (*buf_ptr) += 3; (*column) += 3;
         ret.Type = TokenType_Sub;
       }
       break;
     case 'u': case 'U':
       if (((*buf_ptr)[1] == 'p') || ((*buf_ptr)[1] == 'P'))
       {
-        (*buf_ptr) += 2;
+        (*buf_ptr) += 2; (*column) += 2;
         ret.Type = TokenType_Up;
       }
       break;
     case 'w': case 'W':
       if (substr_equal_nocase(*buf_ptr, "WRITE", 5))
       {
-        (*buf_ptr) += 5;
+        (*buf_ptr) += 5; (*column) += 5;
         ret.Type = TokenType_Write;
       }
       else if (substr_equal_nocase(*buf_ptr, "WRITING", 7))
       {
-        (*buf_ptr) += 7;
+        (*buf_ptr) += 7; (*column) += 7;
         ret.Type = TokenType_Writing;
       }
       break;
@@ -355,14 +355,15 @@ static Token pull_token(char **buf_ptr, int *row, int *column)
           break;
 
         ret.Value = new_value;
-        ++*buf_ptr;
+        ++*buf_ptr; ++*column;
       }
       
       break;
   }
 
-  if (ret.Type == TokenType_UnmatchedChar)
-    ++*buf_ptr;
+  if ((ret.Type == TokenType_UnmatchedChar)
+   && (ret.Value != 0))
+    ++*buf_ptr, ++*column;
 
   return ret;
 #undef QUO
@@ -465,6 +466,9 @@ static Expression *parse_expression(Token *tokens, int token_count)
     }
   }
 
+  if (bracket_level != 0)
+    return NULL; // mismatched brackets
+
   if ((operator_index >= 0)
    && ((sub_index >= 0) || (by_index >= 0)))
     return NULL; // ambiguity
@@ -565,7 +569,7 @@ static Expression *parse_expression(Token *tokens, int token_count)
 
     while (sub_index <= token_count)
     {
-      one_subscript = parse_expression(&tokens[expression_start], by_index - expression_start);
+      one_subscript = parse_expression(&tokens[expression_start], sub_index - expression_start);
 
       if (one_subscript == NULL)
         return NULL;
@@ -1042,13 +1046,14 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
     return false;
 }
 
-static void parse_line(StatementList *list, char *line, int line_length, int *row, int *column)
+static void parse_line(StatementList *list, uchar *line, int line_length, int *row, int *column)
 {
   static Token tokens_prealloc[100];
   static Token *tokens = &tokens_prealloc[0];
-  static int token_offset = 0, token_count = sizeof(tokens_prealloc) / sizeof(Token);
+  static int token_count = sizeof(tokens_prealloc) / sizeof(Token);
+  int token_offset = 0;
 
-  char *line_ptr = line;
+  uchar *line_ptr = line;
 
   while (*line_ptr)
   {
@@ -1155,10 +1160,53 @@ static void parse_line(StatementList *list, char *line, int line_length, int *ro
   }
 }
 
-static bool found_next_statement(char *line, int *line_offset, char *line_start_token)
+static bool previous_token_is_statement_identifier(uchar *line, int length)
 {
+  int offset = length - 1;
+
+  while (isspace(line[offset]))
+    offset--;
+
+  if ((offset >= 1)
+   && (toupper(line[offset - 1]) == 'D')
+   && (toupper(line[offset - 0]) == 'O'))
+    return true;
+
+  if ((offset >= 5)
+   && (toupper(line[offset - 5]) == 'P')
+   && (toupper(line[offset - 4]) == 'L')
+   && (toupper(line[offset - 3]) == 'E')
+   && (toupper(line[offset - 2]) == 'A')
+   && (toupper(line[offset - 1]) == 'S')
+   && (toupper(line[offset - 0]) == 'E'))
+    return true;
+
+  return false;
+}
+
+typedef struct sStatementFinderState
+{
+  bool previous_word_is_please;
+  bool clear_previous_word_is_please;
+  bool have_statement_identifier;
+  bool parsing_come_from;
+} StatementFinderState;
+
+static bool found_next_statement(uchar *line, int *line_offset, uchar *line_start_token, StatementFinderState *state)
+{
+  bool previous_word_is_please = state->previous_word_is_please;
+
   if (*line_offset == 0)
     return false;
+
+  if (isspace(line[*line_offset - 1]))
+    return false;
+
+  if ((state->clear_previous_word_is_please == false)
+   && (toupper(line[*line_offset - 1]) == 'D'))
+    state->clear_previous_word_is_please = true;
+  else
+    state->previous_word_is_please = state->clear_previous_word_is_please = false;
 
   if (line[*line_offset - 1] == '*')
   {
@@ -1169,39 +1217,82 @@ static bool found_next_statement(char *line, int *line_offset, char *line_start_
 
   if (line[*line_offset - 1] == '(')
   {
-    str_copy(line_start_token, "(");
-    --*line_offset;
-    return true;
+    if (state->parsing_come_from || previous_token_is_statement_identifier(line, *line_offset - 1))
+    {
+      state->parsing_come_from = false;
+      return false;
+    }
+    else
+    {
+      str_copy(line_start_token, "(");
+      --*line_offset;
+      return true;
+    }
   }
 
-  if ((*line_offset >= 2)
+  if ((*line_offset > 2)
    && substr_equal_nocase(line + *line_offset - 2, "DO", 2))
   {
-    substr_copy(line_start_token, line + *line_offset - 2, 2);
-    (*line_offset) -= 2;
-    return true;
+    if (previous_word_is_please)
+      return false;
+
+    if (state->have_statement_identifier)
+    {
+      substr_copy(line_start_token, line + *line_offset - 2, 2);
+      (*line_offset) -= 2;
+      return true;
+    }
+
+    state->have_statement_identifier = true;
+  }
+
+  if ((*line_offset > 4)
+   && substr_equal_nocase(line + *line_offset - 4, "COME", 4))
+  {
+    state->parsing_come_from = true;
+    return false;
   }
 
   if ((*line_offset >= 6)
    && substr_equal_nocase(line + *line_offset - 6, "PLEASE", 6))
   {
-    substr_copy(line_start_token, line + *line_offset - 6, 6);
-    (*line_offset) -= 6;
-    return true;
+    if (state->have_statement_identifier)
+    {
+      substr_copy(line_start_token, line + *line_offset - 6, 6);
+      (*line_offset) -= 6;
+      return true;
+    }
+
+    state->have_statement_identifier = true;
+    state->previous_word_is_please = true;
   }
 
   return false;
 }
 
+static void start_next_statement(uchar *line, int *line_offset, uchar *line_start_token, StatementFinderState *state)
+{
+  str_copy(line, line_start_token);
+  *line_offset = str_length(line);
+  line_start_token[0] = 0;
+
+  memset(state, 0, sizeof(*state));
+
+  state->previous_word_is_please = substr_equal_nocase(line, "PLEASE", 6);
+  state->have_statement_identifier = state->previous_word_is_please || substr_equal_nocase(line, "DO", 2);
+}
+
 StatementList parse(FILE *input)
 {
   StatementList ret = new_StatementList();
-  char line_prealloc[100];
-  char *line = &line_prealloc[0];
+  uchar line_prealloc[100];
+  uchar *line = &line_prealloc[0];
   int line_offset = 0, line_size = sizeof(line_prealloc);
   bool first_line = true;
-  char line_start_token[10] = { 0 };
+  uchar line_start_token[10] = { 0 };
   int row = 1, column = 1;
+
+  StatementFinderState state = { 0 };
 
   while (true)
   {
@@ -1219,7 +1310,7 @@ StatementList parse(FILE *input)
     if (line_offset == line_size)
     {
       int new_line_size = line_size * 2;
-      char *new_line = malloc(new_line_size);
+      uchar *new_line = malloc(new_line_size);
 
       memcpy(new_line, line, line_size);
 
@@ -1230,12 +1321,12 @@ StatementList parse(FILE *input)
       line_size = new_line_size;
     }
 
-    if (found_next_statement(line, &line_offset, line_start_token))
+    if (found_next_statement(line, &line_offset, line_start_token, &state))
     {
       line[line_offset] = 0;
       parse_line(&ret, line, line_offset, &row, &column);
-      str_copy(line, line_start_token);
-      line_offset = str_length(line);
+
+      start_next_statement(line, &line_offset, line_start_token, &state);
     }
   }
 
