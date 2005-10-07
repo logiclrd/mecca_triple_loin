@@ -391,6 +391,23 @@ static bool is_lvalue(Expression *expression)
   }
 }
 
+static bool is_array_expression(Expression *expression)
+{
+  ImmediateExpression *immediate;
+
+  if (expression->Type != ExpressionType_Immediate)
+    return false;
+
+  immediate = (ImmediateExpression *)expression;
+
+  if (immediate->Type == ImmediateType_Tail)
+    return true;
+  if (immediate->Type == ImmediateType_Hybrid)
+    return true;
+
+  return false;
+}
+
 static Expression *parse_expression(Token *tokens, int token_count)
 {
   int bracket_level = 0;
@@ -560,7 +577,8 @@ static Expression *parse_expression(Token *tokens, int token_count)
 
     array = parse_expression(tokens, sub_index);
 
-    if (array == NULL)
+    if ((array == NULL)
+     || !is_array_expression(array))
       return NULL;
 
     expression_start = ++sub_index;
@@ -667,9 +685,10 @@ static bool parse_variable_list(Token *token, int token_count, ExpressionList *v
   return true;
 }
 
-static bool parse_gerund_list(Token *token, int token_count, GerundList *gerunds)
+static bool parse_gerund_and_label_lists(Token *token, int token_count, GerundList *gerunds, ExpressionList *labels)
 {
   *gerunds = new_GerundList();
+  *labels = new_ExpressionList();
 
   while (token_count)
   {
@@ -722,6 +741,34 @@ static bool parse_gerund_list(Token *token, int token_count, GerundList *gerunds
         break;
       }
 
+      case TokenType_ParenLeft:
+      {
+        token++, token_count--;
+
+        if ((token[0].Type == TokenType_Number)
+         && (token[1].Type == TokenType_ParenRight))
+        {
+          ushort label = token[0].Value;
+          ImmediateExpression *expression;
+
+          if (label == 0)
+            return false;
+
+          expression = new_ImmediateExpression(ImmediateType_Mesh, label);
+
+          ExpressionList_Add(labels, &expression->Expression);
+
+          token += 2, token_count -= 2;
+
+          if ((token_count != 0) && (token->Type != TokenType_Intersection))
+            return false;
+
+          continue;
+        }
+        else
+          return false;
+      }
+
       default: return false;
     }
 
@@ -755,6 +802,10 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
    && (tokens[next_token + 2].Type == TokenType_ParenRight))
   {
     label = tokens[1].Value;
+
+    if (label == 0)
+      return false;
+
     next_token += 3;
   }
 
@@ -835,6 +886,9 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
        || (tokens[next_token + 2].Type != TokenType_ParenRight)
        || (tokens[next_token + 3].Type != TokenType_Next)
        || (next_token + 4 < token_count))
+        return false;
+
+      if (tokens[next_token + 1].Value == 0)
         return false;
 
       statement = new_NextStatement(header, tokens[next_token + 1].Value);
@@ -926,12 +980,13 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
     {
       AbstainStatement *statement;
       GerundList gerunds;
+      ExpressionList labels;
 
       if ((tokens[next_token + 1].Type != TokenType_From)
-       || !parse_gerund_list(&tokens[next_token + 2], token_count - (next_token + 2), &gerunds))
+       || !parse_gerund_and_label_lists(&tokens[next_token + 2], token_count - (next_token + 2), &gerunds, &labels))
         return false;
 
-      statement = new_AbstainStatement(header, gerunds);
+      statement = new_AbstainStatement(header, gerunds, labels);
       item = &statement->Statement;
 
       break;
@@ -940,11 +995,12 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
     {
       ReinstateStatement *statement;
       GerundList gerunds;
+      ExpressionList labels;
 
-      if (!parse_gerund_list(&tokens[next_token + 1], token_count - (next_token + 1), &gerunds))
+      if (!parse_gerund_and_label_lists(&tokens[next_token + 1], token_count - (next_token + 1), &gerunds, &labels))
         return false;
 
-      statement = new_ReinstateStatement(header, gerunds);
+      statement = new_ReinstateStatement(header, gerunds, labels);
       item = &statement->Statement;
 
       break;
@@ -1002,6 +1058,9 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
        || (tokens[next_token + 3].Type != TokenType_Number)
        || (tokens[next_token + 4].Type != TokenType_ParenRight)
        || (next_token + 5 < token_count))
+        return false;
+
+      if (tokens[next_token + 3].Value == 0)
         return false;
 
       statement = new_ComeFromStatement(header, tokens[next_token + 3].Value);
@@ -1101,6 +1160,10 @@ static void parse_line(StatementList *list, uchar *line, int line_length, int *r
      && (tokens[next_token + 2].Type == TokenType_ParenRight))
     {
       label = tokens[1].Value;
+
+      if (label == 0)
+        complain(197, error_code_to_string(197), NULL, 0, 0);
+
       next_token += 3;
     }
 

@@ -121,6 +121,7 @@ typedef struct sStatement
   bool Polite;
   int ErrorCode;
   int NextStatementRow; // for strict error message compatibility
+  struct sStatementListNode *SuckPointDestination;
 } Statement;
 
 typedef struct sStatementListNode
@@ -234,6 +235,7 @@ typedef struct sAbstainStatement
   Statement Statement;
 
   GerundList Gerunds;
+  ExpressionList Labels;
 } AbstainStatement;
 
 typedef struct sReinstateStatement
@@ -241,6 +243,7 @@ typedef struct sReinstateStatement
   Statement Statement;
 
   GerundList Gerunds;
+  ExpressionList Labels;
 } ReinstateStatement;
 
 typedef struct sGiveUpStatement
@@ -308,8 +311,8 @@ GerundList new_GerundList();
 void GerundList_Add(GerundList *list, Gerund item);
 int GerundList_Count(GerundList *list);
 void GerundList_Unlink(GerundList *list, GerundListNode *node);
-AbstainStatement *new_AbstainStatement(Statement header, GerundList gerunds);
-ReinstateStatement *new_ReinstateStatement(Statement header, GerundList gerunds);
+AbstainStatement *new_AbstainStatement(Statement header, GerundList gerunds, ExpressionList labels);
+ReinstateStatement *new_ReinstateStatement(Statement header, GerundList gerunds, ExpressionList labels);
 GiveUpStatement *new_GiveUpStatement(Statement header);
 WriteInStatement *new_WriteInStatement(Statement header, Expression *target);
 ReadOutStatement *new_ReadOutStatement(Statement header, Expression *value);

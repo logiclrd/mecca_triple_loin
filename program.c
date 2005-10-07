@@ -233,13 +233,12 @@ void StatementList_Unlink(StatementList *list, StatementListNode *node)
 
 Statement make_statement_header(int label, int probability, bool polite, int next_statement_row)
 {
-  Statement ret;
+  Statement ret = { 0 };
 
   ret.Label = label;
   ret.Probability = probability;
   ret.Polite = polite;
   ret.NextStatementRow = next_statement_row;
-  ret.ErrorCode = 0;
 
   return ret;
 }
@@ -403,7 +402,7 @@ void GerundList_Unlink(GerundList *list, GerundListNode *node)
   free(node);
 }
 
-AbstainStatement *new_AbstainStatement(Statement header, GerundList gerunds)
+AbstainStatement *new_AbstainStatement(Statement header, GerundList gerunds, ExpressionList labels)
 {
   AbstainStatement *ret = alloc(AbstainStatement);
 
@@ -411,11 +410,12 @@ AbstainStatement *new_AbstainStatement(Statement header, GerundList gerunds)
   ret->Statement = header;
 
   ret->Gerunds = gerunds;
+  ret->Labels = labels;
 
   return ret;
 }
 
-ReinstateStatement *new_ReinstateStatement(Statement header, GerundList gerunds)
+ReinstateStatement *new_ReinstateStatement(Statement header, GerundList gerunds, ExpressionList labels)
 {
   ReinstateStatement *ret = alloc(ReinstateStatement);
 
@@ -423,6 +423,7 @@ ReinstateStatement *new_ReinstateStatement(Statement header, GerundList gerunds)
   ret->Statement = header;
 
   ret->Gerunds = gerunds;
+  ret->Labels = labels;
 
   return ret;
 }

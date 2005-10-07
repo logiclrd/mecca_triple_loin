@@ -8,7 +8,7 @@ extern jmp_buf error_exit_jmp_buf;
 
 extern bool strict_error_message_format;
 
-void explode(char *message)
+void explode(const char *message)
 {
   if (strict_error_message_format)
     fprintf(stderr,
@@ -25,7 +25,7 @@ void explode(char *message)
   longjmp(error_exit_jmp_buf, 996);
 }
 
-void complain(int code, char *message, char *line, int line_number, int column)
+void complain(int code, const char *message, const char *line, int line_number, int column)
 {
   if (strict_error_message_format)
     fprintf(stderr,
