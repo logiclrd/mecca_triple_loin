@@ -5,6 +5,8 @@
 #include "fuckup.h"
 #include "types.h"
 
+#include "syslib.i.h"
+
 typedef enum eTokenType
 {
   TokenType_InvalidToken,
@@ -85,6 +87,7 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
   {
     switch (**buf_ptr)
     {
+      case '\b': /* backspace       */ --*column;                          break;
       case '\t': /* horizontal tab  */ *column = 8 * ((*column + 7) >> 3); break;
       case '\n': /* newline         */ ++*row; *column = 1;                break;
       case 11:   /* vertical tab??  */                                     break;
@@ -118,10 +121,35 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
     case '+': ++*buf_ptr; ++*column; ret.Type = TokenType_Intersection;  break;
     case '#': ++*buf_ptr; ++*column; ret.Type = TokenType_Mesh;          break;
     case '/':
+      if (substr_equal_nocase(*buf_ptr, "/\bc", 3))
+      {
+        (*buf_ptr) += 3, ++*column;
+        ret.Type = TokenType_Mingle;
+      }
+
+      // falls through:
     case '$': ++*buf_ptr; ++*column; ret.Type = TokenType_Mingle;        break;
     case '.': ++*buf_ptr; ++*column; ret.Type = TokenType_OneSpot;       break;
     case 'v':
-    case 'V': ++*buf_ptr; ++*column; ret.Type = TokenType_Or;            break;
+    case 'V':
+      if (substr_equal_nocase(*buf_ptr, "V\b-", 3))
+      {
+        (*buf_ptr) += 3, ++*column;
+        ret.Type = TokenType_XOr;
+      }
+
+      ++*buf_ptr;
+      ++*column;
+      ret.Type = TokenType_Or;
+      break;
+    case '-':
+      if (substr_equal_nocase(*buf_ptr, "-\bV", 3))
+      {
+        (*buf_ptr) += 3, ++*column;
+        ret.Type  = TokenType_XOr;
+      }
+
+      break;
     case '(': ++*buf_ptr; ++*column; ret.Type = TokenType_ParenLeft;     break;
     case ')': ++*buf_ptr; ++*column; ret.Type = TokenType_ParenRight;    break;
     case '~': ++*buf_ptr; ++*column; ret.Type = TokenType_Select;        break;
@@ -156,7 +184,12 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
       }
       break;
     case 'c': case 'C':
-      if (substr_equal_nocase(*buf_ptr, "CALCULATING", 11))
+      if (substr_equal_nocase(*buf_ptr, "c\b/", 3))
+      {
+        (*buf_ptr) += 3, ++*column;
+        ret.Type = TokenType_Mingle;
+      }
+      else if (substr_equal_nocase(*buf_ptr, "CALCULATING", 11))
       {
         (*buf_ptr) += 11; (*column) += 11;
         ret.Type = TokenType_Calculating;
@@ -1021,15 +1054,13 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
     case TokenType_Write: // WRITE IN expr
     {
       WriteInStatement *statement;
+      ExpressionList targets;
       
-      Expression *expression = parse_expression(&tokens[next_token + 2], token_count - (next_token + 2));
-
       if ((tokens[next_token + 1].Type != TokenType_In)
-       || (expression == NULL)
-       || !is_lvalue(expression))
+       || !parse_variable_list(&tokens[next_token + 2], token_count - (next_token + 2), &targets))
         return false;
 
-      statement = new_WriteInStatement(header, expression);
+      statement = new_WriteInStatement(header, targets);
       item = &statement->Statement;
 
       break;
@@ -1037,14 +1068,13 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
     case TokenType_Read: // READ OUT expr
     {
       ReadOutStatement *statement;
+      ExpressionList sources;
       
-      Expression *expression = parse_expression(&tokens[next_token + 2], token_count - (next_token + 2));
-
       if ((tokens[next_token + 1].Type != TokenType_Out)
-       || (expression == NULL))
+       || !parse_variable_list(&tokens[next_token + 2], token_count - (next_token + 2), &sources))
         return false;
 
-      statement = new_ReadOutStatement(header, expression);
+      statement = new_ReadOutStatement(header, sources);
       item = &statement->Statement;
 
       break;
@@ -1345,9 +1375,41 @@ static void start_next_statement(uchar *line, int *line_offset, uchar *line_star
   state->have_statement_identifier = state->previous_word_is_please || substr_equal_nocase(line, "DO", 2);
 }
 
-StatementList parse(FILE *input)
+typedef struct sInput
 {
-  StatementList ret = new_StatementList();
+  FILE *file;
+  const char *string;
+} Input;
+
+int read_char(Input *input)
+{
+  if (input->file != NULL)
+  {
+    int ret = fgetc(input->file);
+
+    if (ret < 0)
+      input->file = NULL;
+
+    return ret;
+  }
+
+  if (input->string != NULL)
+  {
+    int ret = *input->string;
+
+    if (ret == 0)
+      ret = -1, input->string = NULL;
+    else
+      ++input->string;
+
+    return ret;
+  }
+
+  return -1;
+}
+
+static void parse_to_list(Input *input, StatementList ret)
+{
   uchar line_prealloc[100];
   uchar *line = &line_prealloc[0];
   int line_offset = 0, line_size = sizeof(line_prealloc);
@@ -1359,7 +1421,7 @@ StatementList parse(FILE *input)
 
   while (true)
   {
-    int ch = getc(input);
+    int ch = read_char(input);
 
     if (ch < 0)
     {
@@ -1392,6 +1454,100 @@ StatementList parse(FILE *input)
       start_next_statement(line, &line_offset, line_start_token, &state);
     }
   }
+}
+
+static void check_politeness_level(StatementList program)
+{
+  int total_count, polite_count;
+  int ratio;
+
+  StatementListNode *trace = program.First;
+
+  total_count = polite_count = 0;
+
+  while (trace != NULL)
+  {
+    Statement *statement = trace->This;
+
+    total_count++;
+    if (statement->Polite)
+      polite_count++;
+
+    trace = trace->Next;
+  }
+
+  if (total_count < 3)
+    return;
+
+  ratio = (polite_count != 0) ? total_count / polite_count : 10;
+
+  if (ratio > 5) // less than 1/5 are polite
+    complain(79, error_code_to_string(79), NULL, 0, 0);
+
+  if (ratio < 3) // more than 1/3 are polite
+    complain(99, error_code_to_string(99), NULL, 0, 0);
+}
+
+static bool calls_system_library(StatementList program)
+{
+  StatementListNode *trace = program.First;
+
+  while (trace != NULL)
+  {
+    Statement *statement = trace->This;
+
+    if (statement->Type == StatementType_Next)
+    {
+      NextStatement *next = (NextStatement *)statement;
+
+      switch (next->Label)
+      {
+        case 1000: // .3 <- .1 + .2
+        case 1009: // .3 <- unchecked(.1 + .2), .4 <- (overflow == false) ? #1 : #2
+        case 1010: // .3 <- .1 - .2
+        case 1020: // .1++
+        case 1030: // .3 <- .1 * .2
+        case 1039: // .3 <- unchecked(.1 * .2), .4 <- (overflow == false) ? #1 : #2
+        case 1040: // .3 <- (.2 != 0) ? .1 / .2 : #0
+        case 1050: // .2 <- (.1 != 0) ? :1 / .1 : #0
+        case 1060: // .3 <- .1 | .2
+        case 1070: // .3 <- .1 & .2
+        case 1080: // .3 <- .1 ^ .2
+        case 1500: // :3 <- :1 + :2
+        case 1509: // :3 <- unchecked(:1 + :2), :4 <- (overflow == false) ? #1 : #2
+        case 1510: // :3 <- :1 - :2
+        case 1520: // :1 <- (.1 << 16) | .2
+        case 1525: // ("undocumented") .3 <<= 8
+        case 1530: // :1 <- .1 * .2
+        case 1540: // :3 <- :1 * :2
+        case 1549: // :3 <- unchecked(:1 * :2), .4 <- (overflow == false) ? #1 : #2
+        case 1550: // :3 <- (:2 != 0) ? :1 / :2 : #0
+        case 1900: // .1 <- uniform random no. from #0 to #65535
+        case 1910: // .2 <- normal random no. from #0 to .1, with standard deviation .1 divided by #12
+          return true;
+      }
+    }
+
+    trace = trace->Next;
+  }
+
+  return false;
+}
+
+StatementList parse(FILE *file)
+{
+  Input input = { file };
+  Input system_library = { 0, IntercalSystemLibrary };
+
+  StatementList ret = new_StatementList();
+
+  parse_to_list(&input, ret);
+
+  check_politeness_level(ret);
+
+  if (calls_system_library(ret))
+    parse_to_list(&system_library, ret);
 
   return ret;
 }
+

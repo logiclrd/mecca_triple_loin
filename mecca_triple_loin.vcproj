@@ -119,6 +119,9 @@
 				RelativePath=".\interpret.c">
 			</File>
 			<File
+				RelativePath=".\io.c">
+			</File>
+			<File
 				RelativePath=".\main.c">
 			</File>
 			<File
@@ -139,10 +142,16 @@
 				RelativePath=".\interpret.h">
 			</File>
 			<File
+				RelativePath=".\io.h">
+			</File>
+			<File
 				RelativePath=".\parser.h">
 			</File>
 			<File
 				RelativePath=".\program.h">
+			</File>
+			<File
+				RelativePath=".\syslib.i.h">
 			</File>
 			<File
 				RelativePath=".\types.h">

@@ -438,26 +438,26 @@ GiveUpStatement *new_GiveUpStatement(Statement header)
   return ret;
 }
 
-WriteInStatement *new_WriteInStatement(Statement header, Expression *target)
+WriteInStatement *new_WriteInStatement(Statement header, ExpressionList targets)
 {
   WriteInStatement *ret = alloc(WriteInStatement);
 
   header.Type = StatementType_WriteIn;
   ret->Statement = header;
 
-  ret->Target = target;
+  ret->Targets = targets;
 
   return ret;
 }
 
-ReadOutStatement *new_ReadOutStatement(Statement header, Expression *value)
+ReadOutStatement *new_ReadOutStatement(Statement header, ExpressionList sources)
 {
   ReadOutStatement *ret = alloc(ReadOutStatement);
 
   header.Type = StatementType_ReadOut;
   ret->Statement = header;
 
-  ret->Value = value;
+  ret->Sources = sources;
 
   return ret;
 }

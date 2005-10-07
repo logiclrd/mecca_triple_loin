@@ -35,15 +35,19 @@ void complain(int code, const char *message, const char *line, int line_number, 
             code, message, line_number);
   else
   {
-    int line_length = str_length(line);
+    int line_length = line ? str_length(line) : 0;
     int i;
-    char *pointer = "^";
+    char *pointer = "^\n";
 
     fprintf(stderr, "MTL-E%03d %s\n", code, message);
-    fprintf(stderr, "         DISAGREEMENT #%d, PERSONALITY #%d\n\n", line_number, column);
+    if (line)
+      fprintf(stderr, "         DISAGREEMENT #%d, PERSONALITY #%d\n\n", line_number, column);
 
     if (line_length <= 76)
-      fprintf(stderr, "%s\n", line);
+    {
+      if (line)
+        fprintf(stderr, "%s\n", line);
+    }
     else
     {
       if (column <= 38)
@@ -77,13 +81,13 @@ void complain(int code, const char *message, const char *line, int line_number, 
     if (column > 76)
     {
       column = 73;
-      pointer = "- - -^";
+      pointer = "- - -^\n";
     }
 
     for (i=1; i < column; i++)
       fputc(' ', stderr);
 
-    fprintf(stderr, "%s\n         CORRECT PROGRAM AND RESUBNIT\n", pointer);
+    fprintf(stderr, "%s         CORRECT PROGRAM AND RESUBNIT\n", pointer);
   }
 
   longjmp(error_exit_jmp_buf, code);
@@ -135,6 +139,8 @@ Code codes[] =
   { 997, "YOU ARE ON THE WRONG BASE, ENSIGN" },
   // MTL extensions:
   {  33, "THE IMPROBABLE IS WHAT USUALLY HAPPENS" },
+  { 300, "CANNOT STUFF DIMENSIONS INTO A BOX" },
+  { 583, "THE ARRAY WAS NOT PUT THERE" },
 
   // end of list:
   { -1, NULL }

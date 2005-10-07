@@ -255,14 +255,14 @@ typedef struct sWriteInStatement
 {
   Statement Statement;
 
-  Expression *Target;
+  ExpressionList Targets;
 } WriteInStatement;
 
 typedef struct sReadOutStatement
 {
   Statement Statement;
 
-  Expression *Value;
+  ExpressionList Sources;
 } ReadOutStatement;
 
 typedef struct sComeFromStatement
@@ -314,8 +314,8 @@ void GerundList_Unlink(GerundList *list, GerundListNode *node);
 AbstainStatement *new_AbstainStatement(Statement header, GerundList gerunds, ExpressionList labels);
 ReinstateStatement *new_ReinstateStatement(Statement header, GerundList gerunds, ExpressionList labels);
 GiveUpStatement *new_GiveUpStatement(Statement header);
-WriteInStatement *new_WriteInStatement(Statement header, Expression *target);
-ReadOutStatement *new_ReadOutStatement(Statement header, Expression *value);
+WriteInStatement *new_WriteInStatement(Statement header, ExpressionList targets);
+ReadOutStatement *new_ReadOutStatement(Statement header, ExpressionList sources);
 ComeFromStatement *new_ComeFromStatement(Statement header, ushort Label);
 
 #endif /* PROGRAM_H */
