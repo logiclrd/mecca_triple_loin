@@ -54,7 +54,7 @@ static void compile_label_map_list(StatementList program, LabelMap ***labels, in
       new_map->Label = statement->Label;
       new_map->Statement = trace;
 
-      *labels[*label_count] = new_map;
+      (*labels)[*label_count] = new_map;
 
       ++*label_count;
     }
@@ -221,7 +221,7 @@ static Value evaluate_expression(Expression *expr, Variables *variables)
     case ExpressionType_Unary:
     {
       UnaryExpression *expression = (UnaryExpression *)expr;
-      int top_bit, width_mask;
+      int top_bit;
       uint opposite;
 
       value = evaluate_expression(expression->InnerExpression, variables);
@@ -230,20 +230,13 @@ static Value evaluate_expression(Expression *expr, Variables *variables)
         complain(300, error_code_to_string(300), NULL, 0, 0);
 
       if (value.FullWidth)
-      {
         top_bit = 0x80000000;
-        width_mask = -1;
-      }
       else
-      {
         top_bit = 0x8000;
-        width_mask = 0xFFFF;
-      }
 
-      opposite = (value.Value << 2);
-      if ((value.Value & top_bit) != 0)
-        opposite |= 1;
-      opposite &= width_mask;
+      opposite = (value.Value >> 1);
+      if ((value.Value & 1) != 0)
+        opposite |= top_bit;
 
       switch (expression->Operator)
       {
@@ -320,7 +313,7 @@ static Value evaluate_expression(Expression *expr, Variables *variables)
         case ImmediateType_Tail:
         {
           int offset, scale, dimension_index;
-          Value *trace;
+          ExpressionListNode *trace;
           Array *array;
 
           array = variables->Tails[index];
@@ -330,14 +323,21 @@ static Value evaluate_expression(Expression *expr, Variables *variables)
 
           offset = 0;
           scale = 1;
-          trace = &value;
+          trace = expression->Subscripts.First;
           dimension_index = 0;
           while (trace != NULL)
           {
+            Value subscript_value;
+
             if (dimension_index >= array->NumDimensions)
               complain(241, error_code_to_string(241), NULL, 0, 0);
 
-            offset += trace->Value * scale;
+            subscript_value = evaluate_expression(trace->This, variables);
+
+            if (subscript_value.Value > (uint)array->Dimensions[dimension_index])
+              complain(241, error_code_to_string(241), NULL, 0, 0);
+
+            offset += (subscript_value.Value - 1) * scale;
             scale *= array->Dimensions[dimension_index];
             dimension_index++;
 
@@ -354,7 +354,7 @@ static Value evaluate_expression(Expression *expr, Variables *variables)
         case ImmediateType_Hybrid:
         {
           int offset, scale, dimension_index;
-          Value *trace;
+          ExpressionListNode *trace;
           Array *array;
 
           array = variables->Hybrids[index];
@@ -364,14 +364,21 @@ static Value evaluate_expression(Expression *expr, Variables *variables)
 
           offset = 0;
           scale = 1;
-          trace = &value;
+          trace = expression->Subscripts.First;
           dimension_index = 0;
           while (trace != NULL)
           {
+            Value subscript_value;
+
             if (dimension_index >= array->NumDimensions)
               complain(241, error_code_to_string(241), NULL, 0, 0);
 
-            offset += trace->Value * scale;
+            subscript_value = evaluate_expression(trace->This, variables);
+
+            if (subscript_value.Value > (uint)array->Dimensions[dimension_index])
+              complain(241, error_code_to_string(241), NULL, 0, 0);
+
+            offset += (subscript_value.Value - 1) * scale;
             scale *= array->Dimensions[dimension_index];
             dimension_index++;
 
@@ -765,6 +772,8 @@ void interpret(StatementList program)
 
                     break;
                 }
+
+                break;
               }
               case ExpressionType_Subscript:
               {
@@ -786,7 +795,7 @@ void interpret(StatementList program)
                     if (0 == (variables->TailsIgnored[index / 32] & (1 << (index & 31))))
                     {
                       int offset, scale, dimension_index;
-                      Value *trace;
+                      ExpressionListNode *trace;
                       Array *array;
 
                       array = variables->Tails[index];
@@ -796,14 +805,21 @@ void interpret(StatementList program)
 
                       offset = 0;
                       scale = 1;
-                      trace = &value;
+                      trace = target->Subscripts.First;
                       dimension_index = 0;
                       while (trace != NULL)
                       {
+                        Value subscript_value;
+
                         if (dimension_index >= array->NumDimensions)
                           complain(241, error_code_to_string(241), NULL, 0, 0);
 
-                        offset += trace->Value * scale;
+                        subscript_value = evaluate_expression(trace->This, variables);
+
+                        if (subscript_value.Value > (uint)array->Dimensions[dimension_index])
+                          complain(241, error_code_to_string(241), NULL, 0, 0);
+
+                        offset += (subscript_value.Value - 1) * scale;
                         scale *= array->Dimensions[dimension_index];
                         dimension_index++;
 
@@ -821,7 +837,7 @@ void interpret(StatementList program)
                     if (0 == (variables->HybridsIgnored[index / 32] & (1 << (index & 31))))
                     {
                       int offset, scale, dimension_index;
-                      Value *trace;
+                      ExpressionListNode *trace;
                       Array *array;
 
                       array = variables->Hybrids[index];
@@ -831,14 +847,21 @@ void interpret(StatementList program)
 
                       offset = 0;
                       scale = 1;
-                      trace = &value;
+                      trace = target->Subscripts.First;
                       dimension_index = 0;
                       while (trace != NULL)
                       {
+                        Value subscript_value;
+
                         if (dimension_index >= array->NumDimensions)
                           complain(241, error_code_to_string(241), NULL, 0, 0);
 
-                        offset += trace->Value * scale;
+                        subscript_value = evaluate_expression(trace->This, variables);
+
+                        if (subscript_value.Value > (uint)array->Dimensions[dimension_index])
+                          complain(241, error_code_to_string(241), NULL, 0, 0);
+
+                        offset += (subscript_value.Value - 1) * scale;
                         scale *= array->Dimensions[dimension_index];
                         dimension_index++;
 
@@ -1240,7 +1263,8 @@ void interpret(StatementList program)
             {
               Statement *statement = trace->This;
 
-              if (statement->Probability < 0)
+              if ((statement->Type != StatementType_GiveUp)
+               && (statement->Probability < 0))
                 statement->Probability = -statement->Probability;
 
               trace = trace->Next;
@@ -1406,6 +1430,8 @@ void interpret(StatementList program)
                 break;
               }
             }
+
+            trace = trace->Next;
           }
 
           break;

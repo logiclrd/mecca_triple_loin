@@ -39,7 +39,10 @@ void complain(int code, const char *message, const char *line, int line_number, 
     int i;
     char *pointer = "^\n";
 
-    fprintf(stderr, "MTL-E%03d %s\n", code, message);
+    if (str_equal(message, "%s"))
+      fprintf(stderr, "MTL-E%03d %s\n", code, line ? line : "(NULL)");
+    else
+      fprintf(stderr, "MTL-E%03d %s\n", code, message);
     if (line)
       fprintf(stderr, "         DISAGREEMENT #%d, PERSONALITY #%d\n\n", line_number, column);
 

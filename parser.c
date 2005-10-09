@@ -29,6 +29,7 @@ typedef enum eTokenType
   TokenType_Splat,
   TokenType_Tail,
   TokenType_TwoSpot,
+  TokenType_Wow,
   TokenType_XOr,
   // words:
   TokenType_Abstain,
@@ -125,6 +126,8 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
       {
         (*buf_ptr) += 3, ++*column;
         ret.Type = TokenType_Mingle;
+        ret.Value = '$';
+        break;
       }
 
       // falls through:
@@ -136,6 +139,8 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
       {
         (*buf_ptr) += 3, ++*column;
         ret.Type = TokenType_XOr;
+        ret.Value = '?';
+        break;
       }
 
       ++*buf_ptr;
@@ -147,6 +152,7 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
       {
         (*buf_ptr) += 3, ++*column;
         ret.Type  = TokenType_XOr;
+        ret.Value = '?';
       }
 
       break;
@@ -157,6 +163,7 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
     case '*': ++*buf_ptr; ++*column; ret.Type = TokenType_Splat;         break;
     case ',': ++*buf_ptr; ++*column; ret.Type = TokenType_Tail;          break;
     case ':': ++*buf_ptr; ++*column; ret.Type = TokenType_TwoSpot;       break;
+    case '!': ++*buf_ptr; ++*column; ret.Type = TokenType_Wow;           break;
     case '?': ++*buf_ptr; ++*column; ret.Type = TokenType_XOr;           break;
     // words:
     case 'a': case 'A':
@@ -188,6 +195,7 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
       {
         (*buf_ptr) += 3, ++*column;
         ret.Type = TokenType_Mingle;
+        ret.Value = '$';
       }
       else if (substr_equal_nocase(*buf_ptr, "CALCULATING", 11))
       {
@@ -218,7 +226,7 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
         (*buf_ptr) += 10; (*column) += 10;
         ret.Type = TokenType_Forgetting;
       }
-      if (substr_equal_nocase(*buf_ptr, "FORGET", 6))
+      else if (substr_equal_nocase(*buf_ptr, "FORGET", 6))
       {
         (*buf_ptr) += 6; (*column) += 6;
         ret.Type = TokenType_Forget;
@@ -259,7 +267,7 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
         (*buf_ptr) += 7; (*column) += 7;
         ret.Type = TokenType_Nexting;
       }
-      if (substr_equal_nocase(*buf_ptr, "NEXT", 4))
+      else if (substr_equal_nocase(*buf_ptr, "NEXT", 4))
       {
         (*buf_ptr) += 4; (*column) += 4;
         ret.Type = TokenType_Next;
@@ -388,7 +396,10 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
           break;
 
         ret.Value = new_value;
-        ++*buf_ptr; ++*column;
+
+        do
+          ++*buf_ptr, ++*column;
+        while (isspace(**buf_ptr));
       }
       
       break;
@@ -450,17 +461,26 @@ static Expression *parse_expression(Token *tokens, int token_count)
   bool uniform_brackets = true;
   int operator_index = -1, by_index = -1, sub_index = -1;
   ImmediateType immediate_type;
-  bool have_unary_operator;
-  UnaryOperator unary_operator;
+  UnaryExpression *root_unary_expression, *unary_operator_expression;
   ImmediateExpression *immediate;
 
   int i;
 
+  if (token_count <= 0)
+    return NULL;
+
   for (i=0; i < token_count; i++)
   {
-    if ((tokens[i].Type == TokenType_Spark) || (tokens[i].Type == TokenType_Ears))
+    if ((tokens[i].Type == TokenType_Spark)
+     || (tokens[i].Type == TokenType_Ears)
+     || (tokens[i].Type == TokenType_Wow))
     {
-      if ((bracket_level > 0) && (tokens[i].Type == bracket_type_stack[bracket_level - 1]))
+      TokenType bracket_type = tokens[i].Type;
+
+      if (bracket_type == TokenType_Wow)
+        bracket_type = TokenType_Spark;
+
+      if ((bracket_level > 0) && (bracket_type == bracket_type_stack[bracket_level - 1]))
         bracket_level--;
       else
       {
@@ -478,7 +498,7 @@ static Expression *parse_expression(Token *tokens, int token_count)
           bracket_type_stack_size = new_bracket_type_stack_size;
         }
 
-        bracket_type_stack[bracket_level] = tokens[i].Type;
+        bracket_type_stack[bracket_level] = bracket_type;
         bracket_level++;
       }
     }
@@ -519,38 +539,48 @@ static Expression *parse_expression(Token *tokens, int token_count)
   if (bracket_level != 0)
     return NULL; // mismatched brackets
 
-  if ((operator_index >= 0)
-   && ((sub_index >= 0) || (by_index >= 0)))
-    return NULL; // ambiguity
-
   if (uniform_brackets)
   {
-    bool have_unary_operator = false;
+    int inner_expression_start = 1;
+    int i;
+    Expression *ret;
 
-    switch (tokens[1].Type)
+    while ((tokens[inner_expression_start].Type == TokenType_And)
+        || (tokens[inner_expression_start].Type == TokenType_Or)
+        || (tokens[inner_expression_start].Type == TokenType_XOr))
+      inner_expression_start++;
+
+    if (tokens[0].Type == TokenType_Wow)
     {
-      case TokenType_And:
-      case TokenType_Or:
-      case TokenType_XOr:
-        have_unary_operator = true;
+      tokens[0].Type = TokenType_OneSpot;
+      tokens[0].Value = '.';
+
+      ret = parse_expression(tokens, token_count - 1);
+
+      tokens[0].Type = TokenType_Wow;
+      tokens[0].Value = '!';
+
+      inner_expression_start = 0;
     }
-
-    if (have_unary_operator == false)
-      return parse_expression(tokens + 1, token_count - 2);
     else
-    {
-      Expression *inner = parse_expression(tokens + 2, token_count - 3);
-      UnaryExpression *expression;
+      ret = parse_expression(tokens + inner_expression_start, token_count - inner_expression_start - 1);
 
-      if (inner == NULL)
+    if (ret == NULL)
+      return NULL;
+
+    for (i=1; i < inner_expression_start; i++)
+    {
+      UnaryExpression *outer = new_UnaryExpression(
+        lookup_UnaryOperator(tokens[i].Value),
+        ret);
+
+      if (outer == NULL)
         return NULL;
 
-      expression = new_UnaryExpression(
-        lookup_UnaryOperator(tokens[1].Value),
-        inner);
-
-      return &expression->Expression;
+      ret = &outer->Expression;
     }
+
+    return ret;
   }
 
   if ((operator_index == 0) || (operator_index == token_count - 1))
@@ -651,18 +681,34 @@ static Expression *parse_expression(Token *tokens, int token_count)
 
   tokens++, token_count--;
 
-  have_unary_operator = false;
+  unary_operator_expression = root_unary_expression = NULL;
 
-  switch (tokens[0].Type)
+  while (true)
   {
-    case TokenType_And:
-    case TokenType_Or:
-    case TokenType_XOr:
-      have_unary_operator = true;
+    switch (tokens[0].Type)
+    {
+      case TokenType_And:
+      case TokenType_Or:
+      case TokenType_XOr:
+      {
+        UnaryOperator unary_operator = lookup_UnaryOperator(tokens[0].Value);
 
-      unary_operator = lookup_UnaryOperator(tokens[0].Value);
+        UnaryExpression *inner = new_UnaryExpression(unary_operator, NULL);
 
-      tokens++, token_count--;
+        if (unary_operator_expression != NULL)
+          unary_operator_expression->InnerExpression = &inner->Expression;
+        else
+          root_unary_expression = inner;
+
+        unary_operator_expression = inner;
+
+        tokens++, token_count--;
+
+        continue;
+      }
+    }
+
+    break;
   }
 
   if ((token_count != 1)
@@ -671,13 +717,13 @@ static Expression *parse_expression(Token *tokens, int token_count)
 
   immediate = new_ImmediateExpression(immediate_type, tokens[0].Value);
 
-  if (have_unary_operator == false)
+  if (unary_operator_expression == NULL)
     return &immediate->Expression;
   else
   {
-    UnaryExpression *expression = new_UnaryExpression(unary_operator, &immediate->Expression);
+    unary_operator_expression->InnerExpression = &immediate->Expression;
 
-    return &expression->Expression;
+    return &root_unary_expression->Expression;
   }
 }
 
@@ -685,7 +731,7 @@ static bool parse_variable_list(Token *token, int token_count, ExpressionList *v
 {
   *variables = new_ExpressionList();
 
-  while (token_count)
+  while (token_count > 0)
   {
     ImmediateType type;
     ImmediateExpression *variable;
@@ -713,6 +759,8 @@ static bool parse_variable_list(Token *token, int token_count, ExpressionList *v
 
     if ((token_count != 0) && (token->Type != TokenType_Intersection))
       return false;
+
+    token++, token_count--;
   }
 
   return true;
@@ -811,6 +859,8 @@ static bool parse_gerund_and_label_lists(Token *token, int token_count, GerundLi
 
     if ((token_count != 0) && (token->Type != TokenType_Intersection))
       return false;
+
+    token++, token_count--;
   }
 
   return true;
@@ -858,22 +908,22 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
   if (tokens[next_token].Type == TokenType_Not)
   {
     next_token++;
-    if ((tokens[next_token + 0].Type == TokenType_Number)
-     && (tokens[next_token + 1].Type == TokenType_007))
+    if ((tokens[next_token + 0].Type == TokenType_007)
+     && (tokens[next_token + 1].Type == TokenType_Number))
     {
-      if (tokens[next_token].Value > 100)
+      if (tokens[next_token + 1].Value > 100)
         header.ErrorCode = 33;
-      probability = tokens[next_token].Value;
+      probability = tokens[next_token + 1].Value;
       next_token += 2;
     }
     probability = -probability;
   }
-  else if ((tokens[next_token + 0].Type == TokenType_Number)
-        && (tokens[next_token + 1].Type == TokenType_007))
+  else if ((tokens[next_token + 0].Type == TokenType_007)
+        && (tokens[next_token + 1].Type == TokenType_Number))
   {
-    if (tokens[next_token].Value > 100)
+    if (tokens[next_token + 1].Value > 100)
       header.ErrorCode = 33;
-    probability = tokens[next_token].Value;
+    probability = tokens[next_token + 1].Value;
     next_token += 2;
 
     if (tokens[next_token].Type == TokenType_Not)
@@ -1245,7 +1295,7 @@ static void parse_line(StatementList *list, uchar *line, int line_length, int *r
 
     bad = new_BadStatement(
       make_statement_header(label, probability, polite, *row),
-      line);
+      strdup(line));
 
     StatementList_Add(
       list,
@@ -1253,12 +1303,16 @@ static void parse_line(StatementList *list, uchar *line, int line_length, int *r
   }
 }
 
-static bool previous_token_is_statement_identifier(uchar *line, int length)
+static bool back_trace_accepts_label(uchar *line, int length)
 {
+  // TODO
   int offset = length - 1;
 
   while (isspace(line[offset]))
     offset--;
+
+  if (line[offset] == '+')
+    return true;
 
   if ((offset >= 1)
    && (toupper(line[offset - 1]) == 'D')
@@ -1271,6 +1325,52 @@ static bool previous_token_is_statement_identifier(uchar *line, int length)
    && (toupper(line[offset - 3]) == 'E')
    && (toupper(line[offset - 2]) == 'A')
    && (toupper(line[offset - 1]) == 'S')
+   && (toupper(line[offset - 0]) == 'E'))
+    return true;
+
+  if ((offset >= 3)
+   && (toupper(line[offset - 3]) == 'F')
+   && (toupper(line[offset - 2]) == 'R')
+   && (toupper(line[offset - 1]) == 'O')
+   && (toupper(line[offset - 0]) == 'M'))
+  {
+    // need to see farther back: could be
+    // accepted:                    DO COME FROM (5) ...
+    //                           DO ABSTAIN FROM (3) ...
+    // not accepted: DO ABSTAIN FROM COMING FROM ... ...
+    offset -= 4;
+    while ((offset >= 0) && isspace(line[offset]))
+      offset--;
+
+    if ((offset >= 3)
+     && (toupper(line[offset - 3]) == 'C')
+     && (toupper(line[offset - 2]) == 'O')
+     && (toupper(line[offset - 1]) == 'M')
+     && (toupper(line[offset - 0]) == 'E'))
+      return true;
+
+    if ((offset >= 6)
+     && (toupper(line[offset - 6]) == 'A')
+     && (toupper(line[offset - 5]) == 'B')
+     && (toupper(line[offset - 4]) == 'S')
+     && (toupper(line[offset - 3]) == 'T')
+     && (toupper(line[offset - 2]) == 'A')
+     && (toupper(line[offset - 1]) == 'I')
+     && (toupper(line[offset - 0]) == 'N'))
+      return true;
+
+    return false;
+  }
+
+  if ((offset >= 8)
+   && (toupper(line[offset - 8]) == 'R')
+   && (toupper(line[offset - 7]) == 'E')
+   && (toupper(line[offset - 6]) == 'I')
+   && (toupper(line[offset - 5]) == 'N')
+   && (toupper(line[offset - 4]) == 'S')
+   && (toupper(line[offset - 3]) == 'T')
+   && (toupper(line[offset - 2]) == 'A')
+   && (toupper(line[offset - 1]) == 'T')
    && (toupper(line[offset - 0]) == 'E'))
     return true;
 
@@ -1310,7 +1410,7 @@ static bool found_next_statement(uchar *line, int *line_offset, uchar *line_star
 
   if (line[*line_offset - 1] == '(')
   {
-    if (state->parsing_come_from || previous_token_is_statement_identifier(line, *line_offset - 1))
+    if (state->parsing_come_from || back_trace_accepts_label(line, *line_offset - 1))
     {
       state->parsing_come_from = false;
       return false;
@@ -1323,7 +1423,7 @@ static bool found_next_statement(uchar *line, int *line_offset, uchar *line_star
     }
   }
 
-  if ((*line_offset > 2)
+  if ((*line_offset >= 2)
    && substr_equal_nocase(line + *line_offset - 2, "DO", 2))
   {
     if (previous_word_is_please)
@@ -1339,7 +1439,7 @@ static bool found_next_statement(uchar *line, int *line_offset, uchar *line_star
     state->have_statement_identifier = true;
   }
 
-  if ((*line_offset > 4)
+  if ((*line_offset >= 4)
    && substr_equal_nocase(line + *line_offset - 4, "COME", 4))
   {
     state->parsing_come_from = true;
@@ -1408,7 +1508,7 @@ int read_char(Input *input)
   return -1;
 }
 
-static void parse_to_list(Input *input, StatementList ret)
+static void parse_to_list(Input *input, StatementList *ret)
 {
   uchar line_prealloc[100];
   uchar *line = &line_prealloc[0];
@@ -1426,7 +1526,7 @@ static void parse_to_list(Input *input, StatementList ret)
     if (ch < 0)
     {
       line[line_offset] = 0;
-      parse_line(&ret, line, line_offset, &row, &column);
+      parse_line(ret, line, line_offset, &row, &column);
       break;
     }
 
@@ -1449,7 +1549,7 @@ static void parse_to_list(Input *input, StatementList ret)
     if (found_next_statement(line, &line_offset, line_start_token, &state))
     {
       line[line_offset] = 0;
-      parse_line(&ret, line, line_offset, &row, &column);
+      parse_line(ret, line, line_offset, &row, &column);
 
       start_next_statement(line, &line_offset, line_start_token, &state);
     }
@@ -1479,10 +1579,12 @@ static void check_politeness_level(StatementList program)
   if (total_count < 3)
     return;
 
-  ratio = (polite_count != 0) ? total_count / polite_count : 10;
+  ratio = (polite_count != 0) ? (total_count - 1) / polite_count : 10;
 
   if (ratio > 5) // less than 1/5 are polite
     complain(79, error_code_to_string(79), NULL, 0, 0);
+
+  ratio = total_count / polite_count;
 
   if (ratio < 3) // more than 1/3 are polite
     complain(99, error_code_to_string(99), NULL, 0, 0);
@@ -1490,7 +1592,25 @@ static void check_politeness_level(StatementList program)
 
 static bool calls_system_library(StatementList program)
 {
-  StatementListNode *trace = program.First;
+  StatementListNode *trace;
+
+  bool user_defined[2000];
+
+  memset(user_defined, 0, sizeof(user_defined));
+
+  trace = program.First;
+
+  while (trace != NULL)
+  {
+    Statement *statement = trace->This;
+
+    if ((statement->Label >= 1000) && (statement->Label < 2000))
+      user_defined[statement->Label] = true;
+
+    trace = trace->Next;
+  }
+
+  trace = program.First;
 
   while (trace != NULL)
   {
@@ -1524,7 +1644,8 @@ static bool calls_system_library(StatementList program)
         case 1550: // :3 <- (:2 != 0) ? :1 / :2 : #0
         case 1900: // .1 <- uniform random no. from #0 to #65535
         case 1910: // .2 <- normal random no. from #0 to .1, with standard deviation .1 divided by #12
-          return true;
+          if (!user_defined[next->Label])
+            return true;
       }
     }
 
@@ -1541,12 +1662,12 @@ StatementList parse(FILE *file)
 
   StatementList ret = new_StatementList();
 
-  parse_to_list(&input, ret);
+  parse_to_list(&input, &ret);
 
   check_politeness_level(ret);
 
   if (calls_system_library(ret))
-    parse_to_list(&system_library, ret);
+    parse_to_list(&system_library, &ret);
 
   return ret;
 }

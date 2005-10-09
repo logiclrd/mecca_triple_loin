@@ -299,7 +299,7 @@ void binary_out(uchar *source, int size, int stride)
   {
     int delta = *source;
 
-    int char_out = last_char_out - delta;
+    int char_out = (last_char_out - delta) & 0xFF;
 
     fputc_backwards((uchar)char_out, stdout);
 

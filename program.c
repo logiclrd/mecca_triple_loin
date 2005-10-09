@@ -19,6 +19,9 @@ void ExpressionList_Add(ExpressionList *list, Expression *item)
   new_node->Next = NULL;
   new_node->This = item;
 
+  if (list->Last)
+    list->Last->Next = new_node;
+
   if (!list->First)
     list->First = new_node;
   list->Last = new_node;
@@ -198,6 +201,9 @@ void StatementList_Add(StatementList *list, Statement *item)
   new_node->Next = NULL;
   new_node->This = item;
 
+  if (list->Last)
+    list->Last->Next = new_node;
+
   if (!list->First)
     list->First = new_node;
   list->Last = new_node;
@@ -368,6 +374,9 @@ void GerundList_Add(GerundList *list, Gerund item)
   new_node->Previous = list->Last;
   new_node->Next = NULL;
   new_node->This = item;
+
+  if (list->Last)
+    list->Last->Next = new_node;
 
   if (!list->First)
     list->First = new_node;
