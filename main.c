@@ -7,6 +7,8 @@
 jmp_buf error_exit_jmp_buf;
 
 bool strict_error_message_format = false;
+bool strict_call_stack_size = true;
+bool cheat_for_syslib_functions = true;
 
 int main(int argc, char *argv[])
 {

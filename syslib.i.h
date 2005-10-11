@@ -1,4 +1,6 @@
 const char IntercalSystemLibrary[] =
+"        PLEASE KNOCK BEFORE ENTERING\n"
+"\n"
 "(1000)  PLEASE IGNORE .4\n"
 "        PLEASE ABSTAIN FROM (1005)\n"
 "(1009)  DO STASH .1 + .2 + .5 + .6\n"

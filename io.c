@@ -65,6 +65,13 @@ static int decode(uchar *digit, int digit_length)
 
       break;
     }
+    case 'Z': // ZERO
+    {
+      if ((digit_length == 4) && substr_equal_nocase(digit, "ZERO", 4))
+        return 0;
+
+      break;
+    }
   }
 
   return -1;
@@ -258,10 +265,17 @@ void binary_in(uchar *target, int size, int stride)
   while (size > 0)
   {
     int char_in = fgetc(stdin);
+    int delta;
 
-    int delta = char_in - last_char_in;
+    if (char_in < 0)
+      delta = 256;
+    else
+      delta = (char_in - last_char_in) & 0xFF;
 
-    *target = (uchar)delta;
+    if (stride == 2)
+      *(ushort *)target = (ushort)delta;
+    else
+      *(uint *)target = (uint)delta;
 
     last_char_in = char_in;
 
@@ -297,7 +311,7 @@ void binary_out(uchar *source, int size, int stride)
 {
   while (size > 0)
   {
-    int delta = *source;
+    int delta = (stride == 2) ? (int)*(ushort *)source : (int)*(uint *)source;
 
     int char_out = (last_char_out - delta) & 0xFF;
 

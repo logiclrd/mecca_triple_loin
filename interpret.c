@@ -6,6 +6,9 @@
 #include "types.h"
 #include "io.h"
 
+extern bool strict_call_stack_size;
+extern bool cheat_for_syslib_functions;
+
 typedef struct sLabelMap
 {
   struct sLabelMap *Left, *Right;
@@ -45,7 +48,7 @@ static void compile_label_map_list(StatementList program, LabelMap ***labels, in
         LabelMap **new_labels = malloc(new_allocated_labels * sizeof(LabelMap *));
 
         memcpy(new_labels, *labels, *allocated_labels * sizeof(LabelMap *));
-        free(labels);
+        free(*labels);
 
         *labels = new_labels;
         *allocated_labels = new_allocated_labels;
@@ -646,6 +649,37 @@ typedef struct sCallFrame
   StatementListNode *ContinueAfterStatement;
 } CallFrame;
 
+void check_for_user_syslib_overrides(StatementList program, bool do_fast_syslib_for_label[2000])
+{
+  StatementListNode *trace;
+
+  memset(do_fast_syslib_for_label, 0, 2000 * sizeof(bool));
+
+  do_fast_syslib_for_label[1000] = do_fast_syslib_for_label[1009]
+    = do_fast_syslib_for_label[1010] = do_fast_syslib_for_label[1020]
+    = do_fast_syslib_for_label[1030] = do_fast_syslib_for_label[1039]
+    = do_fast_syslib_for_label[1040] = do_fast_syslib_for_label[1050]
+    = do_fast_syslib_for_label[1060] = do_fast_syslib_for_label[1070]
+    = do_fast_syslib_for_label[1080] = do_fast_syslib_for_label[1500]
+    = do_fast_syslib_for_label[1509] = do_fast_syslib_for_label[1510]
+    = do_fast_syslib_for_label[1520] = do_fast_syslib_for_label[1525]
+    = do_fast_syslib_for_label[1530] = do_fast_syslib_for_label[1540]
+    = do_fast_syslib_for_label[1549] = do_fast_syslib_for_label[1550]
+    = do_fast_syslib_for_label[1900] = do_fast_syslib_for_label[1910] = true;
+
+  trace = program.First;
+
+  while (trace != NULL)
+  {
+    Statement *statement = trace->This;
+
+    if (statement->Label < 2000)
+      do_fast_syslib_for_label[statement->Label] = false;
+
+    trace = trace->Next;
+  }
+}
+
 void interpret(StatementList program)
 {
   int allocated_labels = 100;
@@ -657,8 +691,9 @@ void interpret(StatementList program)
   bool abstenance_list[NumGerunds] = { false };
   Variables *variables = alloc(Variables); // <-- a bit under 1 megabyte!
   StashSpace *stash_space = alloc(StashSpace); // <-- another megabyte!
-  int call_stack_size = 100, call_depth = 0;
+  int call_stack_size = 79, call_depth = 0;
   CallFrame *call_stack = malloc(call_stack_size * sizeof(CallFrame));
+  bool do_fast_syslib_for_label[2000];
 
   memset(variables, 0, sizeof(Variables));
   memset(stash_space, 0, sizeof(StashSpace));
@@ -669,6 +704,7 @@ void interpret(StatementList program)
   label_tree_root = make_label_map_tree(labels, num_labels);
   assign_call_from_suck_points(program, label_tree_root);
   sort_statements(program, statements_by_type);
+  check_for_user_syslib_overrides(program, do_fast_syslib_for_label);
 
   current_statement = program.First;
 
@@ -876,6 +912,8 @@ void interpret(StatementList program)
 
                     break;
                 }
+
+                break;
               }
             }
           }
@@ -889,17 +927,244 @@ void interpret(StatementList program)
           if (abstenance_list[Gerund_Nexting] == true)
             break;
 
+          if (cheat_for_syslib_functions
+           && (statement->Label < 2000)
+           && do_fast_syslib_for_label[statement->Label])
+            switch (statement->Label)
+            {
+              case 1000: // .3 <- .1 + .2
+              {
+                if (variables->OneSpots[1] > ~variables->OneSpots[2])
+                  complain(0, "%s", "(1999)  DOUBLE OR SINGLE PRECISION OVERFLOW\n", 0, 0);
+
+                if (0 == (variables->OneSpotsIgnored[0] & 8))
+                  variables->OneSpots[3] = variables->OneSpots[1] + variables->OneSpots[2];
+
+                break;
+              }
+              case 1009: // .3 <- unchecked(.1 + .2), .4 <- (overflow == false) ? #1 : #2
+              {
+                if (0 == (variables->OneSpotsIgnored[0] & 16))
+                  if (variables->OneSpots[1] > ~variables->OneSpots[2])
+                    variables->OneSpots[4] = 2;
+                  else
+                    variables->OneSpots[4] = 1;
+
+                if (0 == (variables->OneSpotsIgnored[0] & 8))
+                  variables->OneSpots[3] = variables->OneSpots[1] + variables->OneSpots[2];
+
+                break;
+              }
+              case 1010: // .3 <- .1 - .2
+              {
+                if (0 == (variables->OneSpotsIgnored[0] & 8))
+                  variables->OneSpots[3] = variables->OneSpots[1] - variables->OneSpots[2];
+
+                break;
+              }
+              case 1020: // .1++
+              {
+                if (0 == (variables->OneSpotsIgnored[0] & 2))
+                  variables->OneSpots[1]++;
+
+                break;
+              }
+              case 1030: // .3 <- .1 * .2
+              {
+                if (variables->OneSpots[1] > 0xFFFFFFFFu / variables->OneSpots[2])
+                  complain(0, "%s", "(1999)  DOUBLE OR SINGLE PRECISION OVERFLOW\n", 0, 0);
+
+                if (0 == (variables->OneSpotsIgnored[0] & 8))
+                  variables->OneSpots[3] = variables->OneSpots[1] * variables->OneSpots[2];
+
+                break;
+              }
+              case 1039: // .3 <- unchecked(.1 * .2), .4 <- (overflow == false) ? #1 : #2
+              {
+                if (0 == (variables->OneSpotsIgnored[0] & 16))
+                  if (variables->OneSpots[1] > 0xFFFFu / variables->OneSpots[2])
+                    variables->OneSpots[4] = 2;
+                  else
+                    variables->OneSpots[4] = 1;
+
+                if (0 == (variables->OneSpotsIgnored[0] & 8))
+                  variables->OneSpots[3] = variables->OneSpots[1] * variables->OneSpots[2];
+
+                break;
+              }
+              case 1040: // .3 <- (.2 != 0) ? .1 / .2 : #0
+              {
+                if (0 == (variables->OneSpotsIgnored[0] & 8))
+                  if (variables->OneSpots[2] != 0)
+                    variables->OneSpots[3] = variables->OneSpots[1] / variables->OneSpots[2];
+                  else
+                    variables->OneSpots[3] = 0;
+
+                break;
+              }
+              case 1050: // .2 <- (.1 != 0) ? :1 / .1 : #0
+              {
+                if (0 == (variables->OneSpotsIgnored[0] & 4))
+                  if (variables->OneSpots[1] != 0)
+                    variables->OneSpots[2] = variables->TwoSpots[1] / variables->OneSpots[1];
+                  else
+                    variables->OneSpots[2] = 0;
+
+                break;
+              }
+              case 1060: // .3 <- .1 | .2
+              {
+                if (0 == (variables->OneSpotsIgnored[0] & 8))
+                  variables->OneSpots[3] = variables->OneSpots[1] | variables->OneSpots[2];
+
+                break;
+              }
+              case 1070: // .3 <- .1 & .2
+              {
+                if (0 == (variables->OneSpotsIgnored[0] & 8))
+                  variables->OneSpots[3] = variables->OneSpots[1] & variables->OneSpots[2];
+
+                break;
+              }
+              case 1080: // .3 <- .1 ^ .2
+              {
+                if (0 == (variables->OneSpotsIgnored[0] & 8))
+                  variables->OneSpots[3] = variables->OneSpots[1] ^ variables->OneSpots[2];
+
+                break;
+              }
+              case 1500: // :3 <- :1 + :2
+              {
+                if (variables->TwoSpots[1] > ~variables->TwoSpots[2])
+                  complain(0, "%s", "(1999)  DOUBLE OR SINGLE PRECISION OVERFLOW\n", 0, 0);
+
+                if (0 == (variables->TwoSpotsIgnored[0] & 8))
+                  variables->TwoSpots[3] = variables->TwoSpots[1] + variables->TwoSpots[2];
+
+                break;
+              }
+              case 1509: // :3 <- unchecked(:1 + :2), :4 <- (overflow == false) ? #1 : #2
+              {
+                if (0 == (variables->TwoSpotsIgnored[0] & 16))
+                  if (variables->TwoSpots[1] > ~variables->TwoSpots[2])
+                    variables->TwoSpots[4] = 2;
+                  else
+                    variables->TwoSpots[4] = 1;
+
+                if (0 == (variables->TwoSpotsIgnored[0] & 8))
+                  variables->TwoSpots[3] = variables->TwoSpots[1] + variables->TwoSpots[2];
+
+                break;
+              }
+              case 1510: // :3 <- :1 - :2
+              {
+                if (0 == (variables->TwoSpotsIgnored[0] & 8))
+                  variables->TwoSpots[3] = variables->TwoSpots[1] - variables->TwoSpots[2];
+
+                break;
+              }
+              case 1520: // :1 <- (.1 << 16) | .2
+              {
+                if (0 == (variables->TwoSpotsIgnored[0] & 2))
+                  variables->TwoSpots[1] = (variables->OneSpots[1] << 16) | variables->OneSpots[2];
+
+                break;
+              }
+              case 1525: // ("undocumented") .3 <<= 8
+              {
+                if (0 == (variables->TwoSpotsIgnored[0] & 8))
+                  variables->OneSpots[3] = variables->OneSpots[3] << 8;
+
+                break;
+              }
+              case 1530: // :1 <- .1 * .2
+              {
+                if (0 == (variables->TwoSpotsIgnored[0] & 2))
+                  variables->TwoSpots[1] = variables->OneSpots[1] * variables->OneSpots[2];
+
+                break;
+              }
+              case 1540: // :3 <- :1 * :2
+              {
+                if (variables->OneSpots[1] > 0xFFFFu / variables->OneSpots[2])
+                  complain(0, "%s", "(1999)  DOUBLE OR SINGLE PRECISION OVERFLOW\n", 0, 0);
+
+                if (0 == (variables->OneSpotsIgnored[0] & 8))
+                  variables->OneSpots[3] = variables->OneSpots[1] * variables->OneSpots[2];
+
+                break;
+              }
+              case 1549: // :3 <- unchecked(:1 * :2), .4 <- (overflow == false) ? #1 : #2
+              {
+                if (0 == (variables->OneSpotsIgnored[0] & 16))
+                  if (variables->OneSpots[1] > 0xFFFFFFFFu / variables->OneSpots[2])
+                    variables->OneSpots[4] = 2;
+                  else
+                    variables->OneSpots[4] = 1;
+
+                if (0 == (variables->OneSpotsIgnored[0] & 8))
+                  variables->OneSpots[3] = variables->OneSpots[1] * variables->OneSpots[2];
+
+                break;
+              }
+              case 1550: // :3 <- (:2 != 0) ? :1 / :2 : #0
+              {
+                if (0 == (variables->TwoSpotsIgnored[0] & 8))
+                  if (variables->TwoSpots[2] != 0)
+                    variables->TwoSpots[3] = variables->TwoSpots[1] / variables->TwoSpots[2];
+                  else
+                    variables->TwoSpots[3] = 0;
+
+                break;
+              }
+              case 1900: // .1 <- uniform random no. from #0 to #65535
+              {
+                if (0 == (variables->OneSpotsIgnored[0] & 2))
+                {
+                  int low_half = rand() * 256 / (RAND_MAX + 1);
+                  int high_half = rand() * 256 / (RAND_MAX + 1);
+
+                  variables->OneSpots[1] = low_half | (high_half << 8);
+                }
+
+                break;
+              }
+              case 1910: // .2 <- normal random no. from #0 to .1, with standard deviation .1 divided by #12
+              {
+                int i;
+#if RAND_MAX > 0xFFFF
+                long long accumulator;
+#else
+                uint accumulator;
+#endif /* RAND_MAX */
+
+                accumulator = 0;
+                for (i=0; i < 12; i++)
+                  accumulator += rand();
+
+                accumulator = accumulator * variables->OneSpots[1] / 12 + (RAND_MAX / 2);
+
+                if (0 == (variables->OneSpotsIgnored[0] & 4))
+                  variables->OneSpots[2] = accumulator / RAND_MAX;
+
+                break;
+              }
+            }
+
           if (call_depth == call_stack_size)
-          {
-            int new_call_stack_size = call_stack_size * 2;
-            CallFrame *new_call_stack = malloc(new_call_stack_size * sizeof(CallFrame));
+            if (strict_call_stack_size)
+              complain(123, error_code_to_string(123), NULL, 0, 0);
+            else
+            {
+              int new_call_stack_size = call_stack_size * 2;
+              CallFrame *new_call_stack = malloc(new_call_stack_size * sizeof(CallFrame));
 
-            memcpy(new_call_stack, call_stack, call_stack_size * sizeof(CallFrame));
-            free(call_stack);
+              memcpy(new_call_stack, call_stack, call_stack_size * sizeof(CallFrame));
+              free(call_stack);
 
-            call_stack = new_call_stack;
-            call_stack_size = new_call_stack_size;
-          }
+              call_stack = new_call_stack;
+              call_stack_size = new_call_stack_size;
+            }
 
           call_stack[call_depth++].ContinueAfterStatement = current_statement;
 
@@ -1307,68 +1572,180 @@ void interpret(StatementList program)
 
           while (trace != NULL)
           {
-            ImmediateExpression *target = (ImmediateExpression *)trace->This;
-            int index = target->Index;
+            Expression *target_expression = trace->This;
 
-            switch (target->Type)
+            switch (target_expression->Type)
             {
-              case ImmediateType_OneSpot:
+              case ExpressionType_Immediate:
               {
-                uint value = text_in();
-                
-                if (value > 0xFFFF)
-                  complain(275, "DON'T BYTE OFF MORE THAN YOU CAN CHEW", NULL, 0, 0);
-
-                if (0 == (variables->OneSpotsIgnored[index / 32] & (1 << (index % 31))))
-                  variables->OneSpots[index] = value;
-                break;
-              }
-              case ImmediateType_TwoSpot:
-              {
-                uint value = text_in();
-
-                if (0 == (variables->TwoSpotsIgnored[index / 32] & (1 << (index % 31))))
-                  variables->TwoSpots[index] = text_in();
-                break;
-              }
-              case ImmediateType_Tail:
-              case ImmediateType_Hybrid:
-              {
+                ImmediateExpression *target = (ImmediateExpression *)target_expression;
                 int index = target->Index;
 
-                Array *array;
-                int stride;
-                uint *ignored;
-                void *data;
-                
                 switch (target->Type)
                 {
+                  case ImmediateType_OneSpot:
+                  {
+                    uint value = text_in();
+                    
+                    if (value > 0xFFFF)
+                      complain(275, "DON'T BYTE OFF MORE THAN YOU CAN CHEW", NULL, 0, 0);
+
+                    if (0 == (variables->OneSpotsIgnored[index / 32] & (1 << (index % 31))))
+                      variables->OneSpots[index] = value;
+                    break;
+                  }
+                  case ImmediateType_TwoSpot:
+                  {
+                    uint value = text_in();
+
+                    if (0 == (variables->TwoSpotsIgnored[index / 32] & (1 << (index % 31))))
+                      variables->TwoSpots[index] = text_in();
+                    break;
+                  }
                   case ImmediateType_Tail:
-                    array = variables->Tails[index];
-                    stride = 2;
-                    data = array->Data.TailData;
-                    ignored = variables->TailsIgnored;
+                  case ImmediateType_Hybrid:
+                  {
+                    Array *array;
+                    int stride;
+                    uint *ignored;
+                    void *data;
+                    
+                    switch (target->Type)
+                    {
+                      case ImmediateType_Tail:
+                        array = variables->Tails[index];
+                        stride = 2;
+                        data = array->Data.TailData;
+                        ignored = variables->TailsIgnored;
+                        break;
+                      case ImmediateType_Hybrid:
+                        array = variables->Hybrids[index];
+                        stride = 4;
+                        data = array->Data.HybridData;
+                        break;
+                    }
+
+                    if (array == NULL)
+                      complain(583, error_code_to_string(583), NULL, 0, 0);
+
+                    if (array->NumDimensions > 1)
+                      complain(241, error_code_to_string(241), NULL, 0, 0);
+
+                    if (0 == (ignored[index / 32] & (1 << (index % 31))))
+                    {
+                      memset(data, 0, array->Dimensions[0] * stride);
+                      binary_in((uchar *)data, array->Dimensions[0], stride);
+                    }
+                    else
+                      binary_skip_in(array->Dimensions[0]);
+
+                    break;
+                  }
+                }
+
+                break;
+              }
+              case ExpressionType_Subscript:
+              {
+                SubscriptExpression *target = (SubscriptExpression *)target_expression;
+
+                ImmediateExpression *array = (ImmediateExpression *)target->Array;
+
+                int index = array->Index;
+
+                uint value = text_in();
+                bool size_32_bits = (value > 0xFFFF);
+
+                switch (array->Type)
+                {
+                  case ImmediateType_Tail:
+                    if (size_32_bits)
+                      complain(275, error_code_to_string(275), NULL, 0, 0);
+
+                    if (0 == (variables->TailsIgnored[index / 32] & (1 << (index & 31))))
+                    {
+                      int offset, scale, dimension_index;
+                      ExpressionListNode *trace;
+                      Array *array;
+
+                      array = variables->Tails[index];
+
+                      if (array == NULL)
+                        complain(583, error_code_to_string(583), NULL, 0, 0);
+
+                      offset = 0;
+                      scale = 1;
+                      trace = target->Subscripts.First;
+                      dimension_index = 0;
+                      while (trace != NULL)
+                      {
+                        Value subscript_value;
+
+                        if (dimension_index >= array->NumDimensions)
+                          complain(241, error_code_to_string(241), NULL, 0, 0);
+
+                        subscript_value = evaluate_expression(trace->This, variables);
+
+                        if (subscript_value.Value > (uint)array->Dimensions[dimension_index])
+                          complain(241, error_code_to_string(241), NULL, 0, 0);
+
+                        offset += (subscript_value.Value - 1) * scale;
+                        scale *= array->Dimensions[dimension_index];
+                        dimension_index++;
+
+                        trace = trace->Next;
+                      }
+
+                      if (dimension_index < array->NumDimensions)
+                        complain(241, error_code_to_string(241), NULL, 0, 0);
+
+                      array->Data.TailData[offset] = value;
+                    }
+
                     break;
                   case ImmediateType_Hybrid:
-                    array = variables->Hybrids[index];
-                    stride = 4;
-                    data = array->Data.HybridData;
+                    if (0 == (variables->HybridsIgnored[index / 32] & (1 << (index & 31))))
+                    {
+                      int offset, scale, dimension_index;
+                      ExpressionListNode *trace;
+                      Array *array;
+
+                      array = variables->Hybrids[index];
+
+                      if (array == NULL)
+                        complain(583, error_code_to_string(583), NULL, 0, 0);
+
+                      offset = 0;
+                      scale = 1;
+                      trace = target->Subscripts.First;
+                      dimension_index = 0;
+                      while (trace != NULL)
+                      {
+                        Value subscript_value;
+
+                        if (dimension_index >= array->NumDimensions)
+                          complain(241, error_code_to_string(241), NULL, 0, 0);
+
+                        subscript_value = evaluate_expression(trace->This, variables);
+
+                        if (subscript_value.Value > (uint)array->Dimensions[dimension_index])
+                          complain(241, error_code_to_string(241), NULL, 0, 0);
+
+                        offset += (subscript_value.Value - 1) * scale;
+                        scale *= array->Dimensions[dimension_index];
+                        dimension_index++;
+
+                        trace = trace->Next;
+                      }
+
+                      if (dimension_index < array->NumDimensions)
+                        complain(241, error_code_to_string(241), NULL, 0, 0);
+
+                      array->Data.HybridData[offset] = value;
+                    }
+
                     break;
                 }
-
-                if (array == NULL)
-                  complain(583, error_code_to_string(583), NULL, 0, 0);
-
-                if (array->NumDimensions > 1)
-                  complain(241, error_code_to_string(241), NULL, 0, 0);
-
-                if (0 == (ignored[index / 32] & (1 << (index % 31))))
-                {
-                  memset(data, 0, array->Dimensions[0] * stride);
-                  binary_in((uchar *)data, array->Dimensions[0], stride);
-                }
-                else
-                  binary_skip_in(array->Dimensions[0]);
 
                 break;
               }
@@ -1391,45 +1768,34 @@ void interpret(StatementList program)
 
           while (trace != NULL)
           {
-            ImmediateExpression *source = (ImmediateExpression *)trace->This;
-            int index = source->Index;
+            Value value = evaluate_expression(trace->This, variables);
 
-            switch (source->Type)
+            if (value.Next != NULL)
+              complain(300, error_code_to_string(300), NULL, 0, 0);
+
+            if (value.Array != NULL)
             {
-              case ImmediateType_OneSpot: text_out(variables->OneSpots[index]); break;
-              case ImmediateType_TwoSpot: text_out(variables->TwoSpots[index]); break;
-              case ImmediateType_Tail:
-              case ImmediateType_Hybrid:
+              int stride;
+              void *data;
+
+              if (value.Array->NumDimensions > 1)
+                complain(241, error_code_to_string(241), NULL, 0, 0);
+
+              if (value.FullWidth)
               {
-                Array *array;
-                int stride;
-                void *data;
-
-                switch (source->Type)
-                {
-                  case ImmediateType_Tail:
-                    array = variables->Tails[index];
-                    stride = 2;
-                    data = array->Data.TailData;
-                    break;
-                  case ImmediateType_Hybrid:
-                    array = variables->Hybrids[index];
-                    stride = 4;
-                    data = array->Data.HybridData;
-                    break;
-                }
-
-                if (array == NULL)
-                  complain(583, error_code_to_string(583), NULL, 0, 0);
-
-                if (array->NumDimensions > 1)
-                  complain(241, error_code_to_string(241), NULL, 0, 0);
-
-                binary_out(data, array->Dimensions[0], stride);
-
-                break;
+                stride = 4;
+                data = value.Array->Data.HybridData;
               }
+              else
+              {
+                stride = 2;
+                data = value.Array->Data.TailData;
+              }
+
+              binary_out(data, value.Array->Dimensions[0], stride);
             }
+            else
+              text_out(value.Value);
 
             trace = trace->Next;
           }

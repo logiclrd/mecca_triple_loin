@@ -398,7 +398,21 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
         ret.Value = new_value;
 
         do
-          ++*buf_ptr, ++*column;
+        {
+          ++*buf_ptr;
+
+          switch (**buf_ptr)
+          {
+            case '\b': /* backspace       */ --*column;                          break;
+            case '\t': /* horizontal tab  */ *column = 8 * ((*column + 7) >> 3); break;
+            case '\n': /* newline         */ ++*row; *column = 1;                break;
+            case 11:   /* vertical tab??  */                                     break;
+            case 12:   /* page break      */ *row = 60 * ((*row + 59) / 60);     break;
+            case '\r': /* carriage return */ *column = 1;                        break;
+            case ' ':  /* space           */ ++*column;                          break;
+            default:                         ++*column;                          break;
+          }
+        }
         while (isspace(**buf_ptr));
       }
       
@@ -634,7 +648,6 @@ static Expression *parse_expression(Token *tokens, int token_count)
     SubscriptExpression *expression;
     Expression *array;
     ExpressionList subscripts = new_ExpressionList();
-    Expression *one_subscript;
 
     int expression_start;
 
@@ -644,22 +657,27 @@ static Expression *parse_expression(Token *tokens, int token_count)
      || !is_array_expression(array))
       return NULL;
 
-    expression_start = ++sub_index;
-    while ((sub_index < token_count) && (tokens[sub_index].Type != TokenType_Sub))
-      sub_index++;
+    expression_start = sub_index + 1;
 
-    while (sub_index <= token_count)
+    while (expression_start < token_count)
     {
-      one_subscript = parse_expression(&tokens[expression_start], sub_index - expression_start);
+      int i;
+      Expression *one_subscript;
+
+      for (i = token_count; i > expression_start; i--)
+      {
+        one_subscript = parse_expression(&tokens[expression_start], i - expression_start);
+
+        if (one_subscript != NULL)
+          break;
+      }
 
       if (one_subscript == NULL)
         return NULL;
 
       ExpressionList_Add(&subscripts, one_subscript);
 
-      expression_start = ++sub_index;
-      while ((sub_index < token_count) && (tokens[sub_index].Type != TokenType_Sub))
-        sub_index++;
+      expression_start = i;
     }
 
     expression = new_SubscriptExpression(array, subscripts);
@@ -771,7 +789,7 @@ static bool parse_gerund_and_label_lists(Token *token, int token_count, GerundLi
   *gerunds = new_GerundList();
   *labels = new_ExpressionList();
 
-  while (token_count)
+  while (token_count > 0)
   {
     Gerund gerund;
 
@@ -861,6 +879,38 @@ static bool parse_gerund_and_label_lists(Token *token, int token_count, GerundLi
       return false;
 
     token++, token_count--;
+  }
+
+  return true;
+}
+
+static bool parse_expression_list(Token *token, int token_count, ExpressionList *expressions)
+{
+  *expressions = new_ExpressionList();
+
+  while (token_count > 0)
+  {
+    int intersection;
+    Expression *expression;
+
+    intersection = 0;
+    while ((intersection < token_count)
+        && (token[intersection].Type != TokenType_Intersection))
+      intersection++;
+
+    if (intersection == token_count - 1)
+      return false;
+
+    expression = parse_expression(token, intersection);
+
+    if (expression == NULL)
+      return false;
+
+    ExpressionList_Add(expressions, expression);
+
+    intersection++;
+
+    token += intersection, token_count -= intersection;
   }
 
   return true;
@@ -1101,27 +1151,37 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Write: // WRITE IN expr
+    case TokenType_Write: // WRITE IN expr+expr+expr
     {
       WriteInStatement *statement;
       ExpressionList targets;
+      ExpressionListNode *trace;
       
       if ((tokens[next_token + 1].Type != TokenType_In)
-       || !parse_variable_list(&tokens[next_token + 2], token_count - (next_token + 2), &targets))
+       || !parse_expression_list(&tokens[next_token + 2], token_count - (next_token + 2), &targets))
         return false;
+
+      trace = targets.First;
+      while (trace != NULL)
+      {
+        if (!is_lvalue(trace->This))
+          return false;
+
+        trace = trace->Next;
+      }
 
       statement = new_WriteInStatement(header, targets);
       item = &statement->Statement;
 
       break;
     }
-    case TokenType_Read: // READ OUT expr
+    case TokenType_Read: // READ OUT expr+expr+expr
     {
       ReadOutStatement *statement;
       ExpressionList sources;
       
       if ((tokens[next_token + 1].Type != TokenType_Out)
-       || !parse_variable_list(&tokens[next_token + 2], token_count - (next_token + 2), &sources))
+       || !parse_expression_list(&tokens[next_token + 2], token_count - (next_token + 2), &sources))
         return false;
 
       statement = new_ReadOutStatement(header, sources);
@@ -1305,7 +1365,6 @@ static void parse_line(StatementList *list, uchar *line, int line_length, int *r
 
 static bool back_trace_accepts_label(uchar *line, int length)
 {
-  // TODO
   int offset = length - 1;
 
   while (isspace(line[offset]))
@@ -1318,6 +1377,12 @@ static bool back_trace_accepts_label(uchar *line, int length)
    && (toupper(line[offset - 1]) == 'D')
    && (toupper(line[offset - 0]) == 'O'))
     return true;
+
+  if ((offset >= 2)
+   && (toupper(line[offset - 2]) == 'N')
+   && ((toupper(line[offset - 1]) == 'O') || (line[offset - 1] == '\''))
+   && (toupper(line[offset - 0]) == 'T'))
+    return back_trace_accepts_label(line, offset - 2);
 
   if ((offset >= 5)
    && (toupper(line[offset - 5]) == 'P')
