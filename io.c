@@ -95,6 +95,16 @@ uint text_in()
       digit[++digit_length] = getc(stdin);
     while (!isspace(digit[digit_length]));
 
+    if (digit[digit_length] == '\r')
+    {
+      int try_for_NL = getc(stdin);
+
+      if (try_for_NL == '\n')
+        digit[digit_length] = '\n';
+      else
+        ungetc(try_for_NL, stdin);
+    }
+
     digit_value = decode(digit, digit_length);
 
     if ((digit_value < 0)
@@ -111,27 +121,8 @@ uint text_in()
   return accumulator;
 }
 
-static const char *numerals_uppercase[] =
-{
-  { "I" },
-  { "V" },
-  { "X" },
-  { "L" },
-  { "C" },
-  { "D" },
-  { "M" }
-};
-
-static const char *numerals_lowercase[] =
-{
-  { "i" },
-  { "v" },
-  { "x" },
-  { "l" },
-  { "c" },
-  { "d" },
-  { "m" }
-};
+static const char *numerals_uppercase[] = { "I", "V", "X", "L", "C", "D", "M" };
+static const char *numerals_lowercase[] = { "i", "v", "x", "l", "c", "d", "m" };
 
 #define I 0
 #define V 1
@@ -234,7 +225,7 @@ void text_out(uint value)
     return;
   }
 
-  if (value >= 4000000000)
+  if (value >= 4000000000u)
   {
     append_number_part(value / 1000000000, true, true, overbar_chars, numeral_chars);
     value %= 1000000000;

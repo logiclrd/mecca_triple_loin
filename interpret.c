@@ -1121,10 +1121,14 @@ void interpret(StatementList program)
               {
                 if (0 == (variables->OneSpotsIgnored[0] & 2))
                 {
+#if RAND_MAX > 0xFFFF
+                  variables->OneSpots[1] = ((long long)rand()) * 65535LL / (1LL + (long long)RAND_MAX);
+#else
                   int low_half = rand() * 256 / (RAND_MAX + 1);
                   int high_half = rand() * 256 / (RAND_MAX + 1);
 
                   variables->OneSpots[1] = low_half | (high_half << 8);
+#endif /* RAND_MAX */
                 }
 
                 break;

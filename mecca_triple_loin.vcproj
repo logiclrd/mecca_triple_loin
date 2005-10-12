@@ -158,10 +158,55 @@
 			</File>
 		</Filter>
 		<Filter
-			Name="Resource Files"
-			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
-			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}">
+			Name="Tests"
+			Filter="">
+			<File
+				RelativePath=".\test\beer.i">
+			</File>
+			<File
+				RelativePath=".\test\bubble.i">
+			</File>
+			<File
+				RelativePath=".\test\hello_world.i">
+			</File>
+			<File
+				RelativePath=".\test\icat.i">
+			</File>
+			<File
+				RelativePath=".\test\life2.i">
+			</File>
+			<File
+				RelativePath=".\test\life_blinkers">
+			</File>
+			<File
+				RelativePath=".\test\life_glider">
+			</File>
+			<File
+				RelativePath=".\test\life_glider_gun">
+			</File>
+			<File
+				RelativePath=".\test\life_t_tetromino">
+			</File>
+			<File
+				RelativePath=".\test\pow.i">
+			</File>
+			<File
+				RelativePath=".\test\primes.i">
+			</File>
+			<File
+				RelativePath=".\test\replicate.i">
+			</File>
+			<File
+				RelativePath=".\test\rot13.i">
+			</File>
+			<File
+				RelativePath=".\test\sink.i">
+			</File>
 		</Filter>
+		<File
+			RelativePath=".\Makefile"
+			FileType="8">
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

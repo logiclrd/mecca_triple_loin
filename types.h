@@ -1,10 +1,18 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+
 typedef enum { false, true } bool;
 
-typedef unsigned int uint;
-typedef unsigned short ushort;
+#ifdef __GNUC__
+# ifndef __USE_MISC
+#  define __USE_MISC
+# endif
+# include <sys/types.h>
+#else
+ typedef unsigned int uint;
+ typedef unsigned short ushort;
+#endif
 typedef unsigned char uchar;
 
 #define alloc(type) ((type *)malloc(sizeof(type)))
@@ -34,7 +42,7 @@ void free(void *);
 #if defined(_MSC_VER)
 # define NORETURN __declspec(noreturn)
 #elif defined(__GNUC__)
-# define NORETURN __attribute__(__noreturn__)
+# define NORETURN __attribute__((__noreturn__))
 #else
 # define NORETURN
 #endif
