@@ -1,11 +1,11 @@
 CCOPTS = -O3
 
-default: mtl
+default: mtl libmtl
 	@printf "\n\n"
-	@ls -l mtl
+	@ls -l mtl libmtl.a
 	@printf "\n\n"
 
-install: mtl
+install: mtl libmtl
 	@echo Install it yourself you lazy bone.
 
 clean:
@@ -19,6 +19,9 @@ distclean: clean
 mtl: main.o program.o parser.o interpret.o io.o fuckup.o
 	gcc -o mtl main.o program.o parser.o interpret.o io.o fuckup.o
 	strip mtl
+
+libmtl: fuckup.o io.o
+	ar -r libmtl.a fuckup.o io.o
 
 main.o: main.c interpret.h parser.h types.h
 	gcc -c -o main.o main.c ${CCOPTS}

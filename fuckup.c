@@ -103,7 +103,7 @@ typedef struct sCode
 } Code;
 
 /* note: not all of these are used */
-Code codes[] =
+static Code codes[] =
 {
   {   0, "%s" },
   {  17, "DO YOU EXPECT ME TO UNDERSTAND THIS?!:\n\n%s\n\n" },
