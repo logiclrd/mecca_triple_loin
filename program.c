@@ -261,6 +261,18 @@ BadStatement *new_BadStatement(Statement header, char *text)
   return ret;
 }
 
+EndOfCodeModuleStatement *new_EndOfCodeModuleStatement(Statement header, char *module_name)
+{
+  EndOfCodeModuleStatement *ret = alloc(EndOfCodeModuleStatement);
+
+  header.Type = StatementType_EndOfCodeModule;
+  ret->Statement = header;
+
+  ret->ModuleName = module_name;
+
+  return ret;
+}
+
 AssignmentStatement *new_AssignmentStatement(Statement header, Expression *target, Expression *value)
 {
   AssignmentStatement *ret = alloc(AssignmentStatement);

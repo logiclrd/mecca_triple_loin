@@ -37,7 +37,7 @@ void complain(int code, const char *message, const char *line, int line_number, 
   {
     int line_length = line ? str_length(line) : 0;
     int i;
-    char *pointer = "^\n";
+    char *pointer = line ? "^\n" : "\n";
 
     if (str_equal(message, "%s"))
       fprintf(stderr, "MTL-E%03d %s\n", code, line ? line : "(NULL)");
@@ -102,7 +102,7 @@ typedef struct sCode
   const char *Message;
 } Code;
 
-// note: not all of these are used
+/* note: not all of these are used */
 Code codes[] =
 {
   {   0, "%s" },
@@ -127,7 +127,7 @@ Code codes[] =
   { 633, "YOU FELL TOO FAR THIS TIME" },
   { 774, "COMPILER-GENERATED ENTROPY INJECTION" },
   { 778, "I TOOK THE WRONG PATH" },
-  // C-INTERCAL extensions:
+  /* C-INTERCAL extensions: */
   { 111, "COMPLY WITH THE STANDARD YOU TURKEY" },
   { 127, "SYSTEM CORE GOT LOST" },
   { 222, "YOU CAN'T HIDE AND YOU MAY NO LONGER RUN" },
@@ -140,12 +140,12 @@ Code codes[] =
   { 999, "STRUCTURAL INTEGRITY COMPROMISED" },
   { 998, "SYSTEMATIC NOMENCLATURE FAILURE" },
   { 997, "YOU ARE ON THE WRONG BASE, ENSIGN" },
-  // MTL extensions:
+  /* MTL extensions: */
   {  33, "THE IMPROBABLE IS WHAT USUALLY HAPPENS" },
   { 300, "CANNOT STUFF DIMENSIONS INTO A BOX" },
   { 583, "THE ARRAY WAS NOT PUT THERE" },
 
-  // end of list:
+  /* end of list: */
   { -1, NULL }
 };
 

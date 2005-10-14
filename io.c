@@ -4,18 +4,20 @@
 #include "fuckup.h"
 #include "types.h"
 
+extern bool wimp_mode;
+
 static int decode(uchar *digit, int digit_length)
 {
   switch (toupper(digit[0]))
   {
-    case 'E': // EIGHT
+    case 'E': /* EIGHT */
     {
       if ((digit_length == 5) && substr_equal_nocase(digit, "EIGHT", 5))
         return 8;
 
       break;
     }
-    case 'F': // FIVE, FOUR
+    case 'F': /* FIVE, FOUR */
     {
       if ((digit_length == 4) && substr_equal_nocase(digit, "FIVE", 4))
         return 5;
@@ -25,7 +27,7 @@ static int decode(uchar *digit, int digit_length)
 
       break;
     }
-    case 'N': // NINE, NINER
+    case 'N': /* NINE, NINER */
     {
       if ((digit_length == 4) && substr_equal_nocase(digit, "NINE", 4))
         return 9;
@@ -35,7 +37,7 @@ static int decode(uchar *digit, int digit_length)
 
       break;
     }
-    case 'O': // OH, ONE
+    case 'O': /* OH, ONE */
     {
       if ((digit_length == 2) && substr_equal_nocase(digit, "OH", 2))
         return 0;
@@ -45,7 +47,7 @@ static int decode(uchar *digit, int digit_length)
 
       break;
     }
-    case 'S': // SEVEN, SIX
+    case 'S': /* SEVEN, SIX */
     {
       if ((digit_length == 5) && substr_equal_nocase(digit, "SEVEN", 5))
         return 7;
@@ -55,7 +57,7 @@ static int decode(uchar *digit, int digit_length)
 
       break;
     }
-    case 'T': // THREE, TWO
+    case 'T': /* THREE, TWO */
     {
       if ((digit_length == 5) && substr_equal_nocase(digit, "THREE", 5))
         return 3;
@@ -65,7 +67,7 @@ static int decode(uchar *digit, int digit_length)
 
       break;
     }
-    case 'Z': // ZERO
+    case 'Z': /* ZERO */
     {
       if ((digit_length == 4) && substr_equal_nocase(digit, "ZERO", 4))
         return 0;
@@ -81,6 +83,12 @@ uint text_in()
 {
   uchar digit[30];
   uint accumulator = 0;
+
+  if (wimp_mode)
+  {
+    scanf("%u", &accumulator);
+    return accumulator;
+  }
 
   while (true)
   {
@@ -219,9 +227,15 @@ void text_out(uint value)
   char overbar_chars[30] = { 0 };
   char numeral_chars[30] = { 0 };
 
+  if (wimp_mode)
+  {
+    printf("%d\n", value);
+    return;
+  }
+
   if (value == 0)
   {
-    printf("\n_\n \n", value);
+    printf("\n_\n \n");
     return;
   }
 
@@ -274,7 +288,7 @@ void binary_in(uchar *target, int size, int stride)
   }
 }
 
-// oh boy does this ever render the input useless!
+/* oh boy does this ever render the input useless! */
 void binary_skip_in(int size)
 {
   while (size > 0)
@@ -286,11 +300,11 @@ void binary_skip_in(int size)
 
 static void fputc_backwards(int bits, FILE *out)
 {
-  // swap groups of 1 bit
+  /* swap groups of 1 bit */
   bits = ((bits & 0xAA) >> 1) | ((bits & 0x55) << 1);
-  // swap groups of 2 bits
+  /* swap groups of 2 bits */
   bits = ((bits & 0xCC) >> 2) | ((bits & 0x33) << 2);
-  // swap groups of 4 bits
+  /* swap groups of 4 bits */
   bits = ((bits & 0xF0) >> 4) | ((bits & 0x0F) << 4);
 
   fputc(bits, out);

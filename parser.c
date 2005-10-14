@@ -11,7 +11,7 @@ typedef enum eTokenType
 {
   TokenType_InvalidToken,
   TokenType_UnmatchedChar,
-  // symbols:
+  /* symbols: */
   TokenType_007,
   TokenType_And,
   TokenType_Ears,
@@ -31,7 +31,7 @@ typedef enum eTokenType
   TokenType_TwoSpot,
   TokenType_Wow,
   TokenType_XOr,
-  // words:
+  /* words: */
   TokenType_Abstain,
   TokenType_Abstaining,
   TokenType_Assigning,
@@ -68,7 +68,7 @@ typedef enum eTokenType
   TokenType_Up,
   TokenType_Write,
   TokenType_Writing,
-  // dynamic:
+  /* dynamic: */
   TokenType_Number,
 } TokenType;
 
@@ -107,7 +107,7 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
 
   switch (**buf_ptr)
   {
-    // symbols:
+    /* symbols: */
     case '%': ++*buf_ptr; ++*column; ret.Type = TokenType_007;           break;
     case '&': ++*buf_ptr; ++*column; ret.Type = TokenType_And;           break;
     case '"': ++*buf_ptr; ++*column; ret.Type = TokenType_Ears;          break;
@@ -130,7 +130,7 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
         break;
       }
 
-      // falls through:
+      /* falls through: */
     case '$': ++*buf_ptr; ++*column; ret.Type = TokenType_Mingle;        break;
     case '.': ++*buf_ptr; ++*column; ret.Type = TokenType_OneSpot;       break;
     case 'v':
@@ -165,7 +165,7 @@ static Token pull_token(uchar **buf_ptr, int *row, int *column)
     case ':': ++*buf_ptr; ++*column; ret.Type = TokenType_TwoSpot;       break;
     case '!': ++*buf_ptr; ++*column; ret.Type = TokenType_Wow;           break;
     case '?': ++*buf_ptr; ++*column; ret.Type = TokenType_XOr;           break;
-    // words:
+    /* words: */
     case 'a': case 'A':
       if (substr_equal_nocase(*buf_ptr, "ABSTAINING", 10))
       {
@@ -543,7 +543,7 @@ static Expression *parse_expression(Token *tokens, int token_count)
       if (new_operator_index >= 0)
       {
         if (operator_index >= 0)
-          return NULL; // the standard says an ambiguity (as operators have no "precedents") is invalid
+          return NULL; /* the standard says an ambiguity (as operators have no "precedents") is invalid */
 
         operator_index = new_operator_index;
       }
@@ -551,7 +551,7 @@ static Expression *parse_expression(Token *tokens, int token_count)
   }
 
   if (bracket_level != 0)
-    return NULL; // mismatched brackets
+    return NULL; /* mismatched brackets */
 
   if (uniform_brackets)
   {
@@ -598,7 +598,7 @@ static Expression *parse_expression(Token *tokens, int token_count)
   }
 
   if ((operator_index == 0) || (operator_index == token_count - 1))
-    return NULL; // badly-formed expression
+    return NULL; /* badly-formed expression */
 
   if (operator_index >= 0)
   {
@@ -694,7 +694,7 @@ static Expression *parse_expression(Token *tokens, int token_count)
     case TokenType_Mesh:    immediate_type = ImmediateType_Mesh;    break;
 
     default:
-      return NULL; // unrecognized token
+      return NULL; /* unrecognized token */
   }
 
   tokens++, token_count--;
@@ -953,7 +953,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
   else if (tokens[next_token].Type == TokenType_Do)
     next_token++;
   else
-    return false; // prolog is not okay
+    return false; /* prolog is not okay */
 
   if (tokens[next_token].Type == TokenType_Not)
   {
@@ -1011,7 +1011,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
   switch (tokens[next_token].Type)
   {
-    case TokenType_ParenLeft: // (label) NEXT
+    case TokenType_ParenLeft: /* (label) NEXT */
     {
       NextStatement *statement;
 
@@ -1029,7 +1029,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Resume: // RESUME expr
+    case TokenType_Resume: /* RESUME expr */
     {
       ResumeStatement *statement;
       
@@ -1043,7 +1043,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Forget: // FORGET expr
+    case TokenType_Forget: /* FORGET expr */
     {
       ForgetStatement *statement;
       
@@ -1057,7 +1057,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Stash: // STASH list
+    case TokenType_Stash: /* STASH list */
     {
       StashStatement *statement;
       ExpressionList variables;
@@ -1070,7 +1070,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Retrieve: // RETRIEVE list
+    case TokenType_Retrieve: /* RETRIEVE list */
     {
       RetrieveStatement *statement;
       ExpressionList variables;
@@ -1083,7 +1083,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Ignore: // IGNORE list
+    case TokenType_Ignore: /* IGNORE list */
     {
       IgnoreStatement *statement;
       ExpressionList variables;
@@ -1096,7 +1096,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Remember: // REMEMBER list
+    case TokenType_Remember: /* REMEMBER list */
     {
       RememberStatement *statement;
       ExpressionList variables;
@@ -1109,7 +1109,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Abstain: // ABSTAIN FROM list
+    case TokenType_Abstain: /* ABSTAIN FROM list */
     {
       AbstainStatement *statement;
       GerundList gerunds;
@@ -1124,7 +1124,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Reinstate: // REINSTATE list
+    case TokenType_Reinstate: /* REINSTATE list */
     {
       ReinstateStatement *statement;
       GerundList gerunds;
@@ -1138,7 +1138,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Give: // GIVE UP
+    case TokenType_Give: /* GIVE UP */
     {
       GiveUpStatement *statement;
 
@@ -1151,7 +1151,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Write: // WRITE IN expr+expr+expr
+    case TokenType_Write: /* WRITE IN expr+expr+expr */
     {
       WriteInStatement *statement;
       ExpressionList targets;
@@ -1175,7 +1175,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Read: // READ OUT expr+expr+expr
+    case TokenType_Read: /* READ OUT expr+expr+expr */
     {
       ReadOutStatement *statement;
       ExpressionList sources;
@@ -1189,7 +1189,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    case TokenType_Come: // COME FROM (label)
+    case TokenType_Come: /* COME FROM (label) */
     {
       ComeFromStatement *statement;
 
@@ -1208,7 +1208,7 @@ static bool parse_line_tokens(StatementList *list, Token *tokens, int token_coun
 
       break;
     }
-    default: // try for: expr <- expr
+    default: /* try for: expr <- expr */
     {
       AssignmentStatement *statement;
       int gets_index;
@@ -1281,7 +1281,7 @@ static void parse_line(StatementList *list, uchar *line, int line_length, int *r
   }
 
   if (token_offset == 0)
-    return; // it is not shameful to have empty statements
+    return; /* it is not shameful to have empty statements */
 
   tokens[token_offset].Type = TokenType_InvalidToken;
 
@@ -1399,10 +1399,11 @@ static bool back_trace_accepts_label(uchar *line, int length)
    && (toupper(line[offset - 1]) == 'O')
    && (toupper(line[offset - 0]) == 'M'))
   {
-    // need to see farther back: could be
-    // accepted:                    DO COME FROM (5) ...
-    //                           DO ABSTAIN FROM (3) ...
-    // not accepted: DO ABSTAIN FROM COMING FROM ... ...
+    /* need to see farther back: could be
+     * accepted:                    DO COME FROM (5) ...
+     *                           DO ABSTAIN FROM (3) ...
+     * not accepted: DO ABSTAIN FROM COMING FROM ... ...
+     */
     offset -= 4;
     while ((offset >= 0) && isspace(line[offset]))
       offset--;
@@ -1646,18 +1647,19 @@ static void check_politeness_level(StatementList program)
 
   ratio = (polite_count != 0) ? (total_count - 1) / polite_count : 10;
 
-  if (ratio > 5) // less than 1/5 are polite
+  if (ratio > 5) /* less than 1/5 are polite */
     complain(79, error_code_to_string(79), NULL, 0, 0);
 
   ratio = total_count / polite_count;
 
-  if (ratio < 3) // more than 1/3 are polite
+  if (ratio < 3) /* more than 1/3 are polite */
     complain(99, error_code_to_string(99), NULL, 0, 0);
 }
 
 static bool calls_system_library(StatementList program)
 {
   StatementListNode *trace;
+  bool have_use = false;
 
   bool user_defined[2000];
 
@@ -1687,37 +1689,39 @@ static bool calls_system_library(StatementList program)
 
       switch (next->Label)
       {
-        case 1000: // .3 <- .1 + .2
-        case 1009: // .3 <- unchecked(.1 + .2), .4 <- (overflow == false) ? #1 : #2
-        case 1010: // .3 <- .1 - .2
-        case 1020: // .1++
-        case 1030: // .3 <- .1 * .2
-        case 1039: // .3 <- unchecked(.1 * .2), .4 <- (overflow == false) ? #1 : #2
-        case 1040: // .3 <- (.2 != 0) ? .1 / .2 : #0
-        case 1050: // .2 <- (.1 != 0) ? :1 / .1 : #0
-        case 1060: // .3 <- .1 | .2
-        case 1070: // .3 <- .1 & .2
-        case 1080: // .3 <- .1 ^ .2
-        case 1500: // :3 <- :1 + :2
-        case 1509: // :3 <- unchecked(:1 + :2), :4 <- (overflow == false) ? #1 : #2
-        case 1510: // :3 <- :1 - :2
-        case 1520: // :1 <- (.1 << 16) | .2
-        case 1525: // ("undocumented") .3 <<= 8
-        case 1530: // :1 <- .1 * .2
-        case 1540: // :3 <- :1 * :2
-        case 1549: // :3 <- unchecked(:1 * :2), .4 <- (overflow == false) ? #1 : #2
-        case 1550: // :3 <- (:2 != 0) ? :1 / :2 : #0
-        case 1900: // .1 <- uniform random no. from #0 to #65535
-        case 1910: // .2 <- normal random no. from #0 to .1, with standard deviation .1 divided by #12
-          if (!user_defined[next->Label])
-            return true;
+        case 1000: /* .3 <- .1 + .2 */
+        case 1009: /* .3 <- unchecked(.1 + .2), .4 <- (overflow == false) ? #1 : #2 */
+        case 1010: /* .3 <- .1 - .2 */
+        case 1020: /* .1++ */
+        case 1030: /* .3 <- .1 * .2 */
+        case 1039: /* .3 <- unchecked(.1 * .2), .4 <- (overflow == false) ? #1 : #2 */
+        case 1040: /* .3 <- (.2 != 0) ? .1 / .2 : #0 */
+        case 1050: /* .2 <- (.1 != 0) ? :1 / .1 : #0 */
+        case 1060: /* .3 <- .1 | .2 */
+        case 1070: /* .3 <- .1 & .2 */
+        case 1080: /* .3 <- .1 ^ .2 */
+        case 1500: /* :3 <- :1 + :2 */
+        case 1509: /* :3 <- unchecked(:1 + :2), :4 <- (overflow == false) ? #1 : #2 */
+        case 1510: /* :3 <- :1 - :2 */
+        case 1520: /* :1 <- (.1 << 16) | .2 */
+        case 1525: /* ("undocumented") .3 <<= 8 */
+        case 1530: /* :1 <- .1 * .2 */
+        case 1540: /* :3 <- :1 * :2 */
+        case 1549: /* :3 <- unchecked(:1 * :2), .4 <- (overflow == false) ? #1 : #2 */
+        case 1550: /* :3 <- (:2 != 0) ? :1 / :2 : #0 */
+        case 1900: /* .1 <- uniform random no. from #0 to #65535 */
+        case 1910: /* .2 <- normal random no. from #0 to .1, with standard deviation .1 divided by #12 */
+          if (user_defined[next->Label])
+            return false;
+
+          have_use = true;
       }
     }
 
     trace = trace->Next;
   }
 
-  return false;
+  return have_use;
 }
 
 StatementList parse(FILE *file)
@@ -1729,10 +1733,24 @@ StatementList parse(FILE *file)
 
   parse_to_list(&input, &ret);
 
+  StatementList_Add(
+    &ret,
+    (Statement *)new_EndOfCodeModuleStatement(
+      make_statement_header(0, 100, false, -1),
+      "user"));
+
   check_politeness_level(ret);
 
   if (calls_system_library(ret))
+  {
     parse_to_list(&system_library, &ret);
+
+    StatementList_Add(
+      &ret,
+      (Statement *)new_EndOfCodeModuleStatement(
+        make_statement_header(0, 100, false, -1),
+        "syslib"));
+  }
 
   return ret;
 }

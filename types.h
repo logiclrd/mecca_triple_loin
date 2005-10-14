@@ -22,17 +22,17 @@ void free(void *);
 
 #include <string.h>
 
-#define str_copy(a, b) strcpy(a, b)
+#define str_copy(a, b) strcpy((char *)(a), (char *)(b))
 #define substr_copy(a, b, n) (memcpy(a, b, n), a[n] = 0)
-#define str_length(a) ((int)strlen(a))
-#define str_equal(a, b) (0 == strcmp(a, b))
-#define substr_equal(a, b, n) (0 == strncmp(a, b, n))
+#define str_length(a) ((int)strlen((char *)(a)))
+#define str_equal(a, b) (0 == strcmp((char *)(a), (char *)(b)))
+#define substr_equal(a, b, n) (0 == strncmp((char *)(a), (char *)(b), n))
 #ifdef WIN32
-# define str_equal_nocase(a, b) (0 == stricmp(a, b))
-# define substr_equal_nocase(a, b, n) (0 == strnicmp(a, b, n))
+# define str_equal_nocase(a, b) (0 == stricmp((char *)(a), (char *)(b)))
+# define substr_equal_nocase(a, b, n) (0 == strnicmp((char *)(a), (char *)(b), n))
 #else
-# define str_equal_nocase(a, b) (0 == strcasecmp(a, b))
-# define substr_equal_nocase(a, b, n) (0 == strncasecmp(a, b, n))
+# define str_equal_nocase(a, b) (0 == strcasecmp((char *)(a), (char *)(b)))
+# define substr_equal_nocase(a, b, n) (0 == strncasecmp((char *)(a), (char *)(b), n))
 #endif /* WIN32 */
 
 #ifndef NULL

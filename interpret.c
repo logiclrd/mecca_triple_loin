@@ -673,6 +673,9 @@ void check_for_user_syslib_overrides(StatementList program, bool do_fast_syslib_
   {
     Statement *statement = trace->This;
 
+    if (statement->Type == StatementType_EndOfCodeModule)
+      break;
+
     if (statement->Label < 2000)
       do_fast_syslib_for_label[statement->Label] = false;
 
@@ -689,8 +692,8 @@ void interpret(StatementList program)
   StatementList statements_by_type[NumGerunds];
   StatementListNode *current_statement;
   bool abstenance_list[NumGerunds] = { false };
-  Variables *variables = alloc(Variables); // <-- a bit under 1 megabyte!
-  StashSpace *stash_space = alloc(StashSpace); // <-- another megabyte!
+  Variables *variables = alloc(Variables); /* <-- a bit under 1 megabyte! */
+  StashSpace *stash_space = alloc(StashSpace); /* <-- another megabyte! */
   int call_stack_size = 79, call_depth = 0;
   CallFrame *call_stack = malloc(call_stack_size * sizeof(CallFrame));
   bool do_fast_syslib_for_label[2000];
@@ -930,9 +933,10 @@ void interpret(StatementList program)
           if (cheat_for_syslib_functions
            && (statement->Label < 2000)
            && do_fast_syslib_for_label[statement->Label])
+          {
             switch (statement->Label)
             {
-              case 1000: // .3 <- .1 + .2
+              case 1000: /* .3 <- .1 + .2 */
               {
                 if (variables->OneSpots[1] > ~variables->OneSpots[2])
                   complain(0, "%s", "(1999)  DOUBLE OR SINGLE PRECISION OVERFLOW\n", 0, 0);
@@ -942,7 +946,7 @@ void interpret(StatementList program)
 
                 break;
               }
-              case 1009: // .3 <- unchecked(.1 + .2), .4 <- (overflow == false) ? #1 : #2
+              case 1009: /* .3 <- unchecked(.1 + .2), .4 <- (overflow == false) ? #1 : #2 */
               {
                 if (0 == (variables->OneSpotsIgnored[0] & 16))
                   if (variables->OneSpots[1] > ~variables->OneSpots[2])
@@ -955,21 +959,21 @@ void interpret(StatementList program)
 
                 break;
               }
-              case 1010: // .3 <- .1 - .2
+              case 1010: /* .3 <- .1 - .2 */
               {
                 if (0 == (variables->OneSpotsIgnored[0] & 8))
                   variables->OneSpots[3] = variables->OneSpots[1] - variables->OneSpots[2];
 
                 break;
               }
-              case 1020: // .1++
+              case 1020: /* .1++ */
               {
                 if (0 == (variables->OneSpotsIgnored[0] & 2))
                   variables->OneSpots[1]++;
 
                 break;
               }
-              case 1030: // .3 <- .1 * .2
+              case 1030: /* .3 <- .1 * .2 */
               {
                 if (variables->OneSpots[1] > 0xFFFFFFFFu / variables->OneSpots[2])
                   complain(0, "%s", "(1999)  DOUBLE OR SINGLE PRECISION OVERFLOW\n", 0, 0);
@@ -979,7 +983,7 @@ void interpret(StatementList program)
 
                 break;
               }
-              case 1039: // .3 <- unchecked(.1 * .2), .4 <- (overflow == false) ? #1 : #2
+              case 1039: /* .3 <- unchecked(.1 * .2), .4 <- (overflow == false) ? #1 : #2 */
               {
                 if (0 == (variables->OneSpotsIgnored[0] & 16))
                   if (variables->OneSpots[1] > 0xFFFFu / variables->OneSpots[2])
@@ -992,7 +996,7 @@ void interpret(StatementList program)
 
                 break;
               }
-              case 1040: // .3 <- (.2 != 0) ? .1 / .2 : #0
+              case 1040: /* .3 <- (.2 != 0) ? .1 / .2 : #0 */
               {
                 if (0 == (variables->OneSpotsIgnored[0] & 8))
                   if (variables->OneSpots[2] != 0)
@@ -1002,7 +1006,7 @@ void interpret(StatementList program)
 
                 break;
               }
-              case 1050: // .2 <- (.1 != 0) ? :1 / .1 : #0
+              case 1050: /* .2 <- (.1 != 0) ? :1 / .1 : #0 */
               {
                 if (0 == (variables->OneSpotsIgnored[0] & 4))
                   if (variables->OneSpots[1] != 0)
@@ -1012,28 +1016,28 @@ void interpret(StatementList program)
 
                 break;
               }
-              case 1060: // .3 <- .1 | .2
+              case 1060: /* .3 <- .1 | .2 */
               {
                 if (0 == (variables->OneSpotsIgnored[0] & 8))
                   variables->OneSpots[3] = variables->OneSpots[1] | variables->OneSpots[2];
 
                 break;
               }
-              case 1070: // .3 <- .1 & .2
+              case 1070: /* .3 <- .1 & .2 */
               {
                 if (0 == (variables->OneSpotsIgnored[0] & 8))
                   variables->OneSpots[3] = variables->OneSpots[1] & variables->OneSpots[2];
 
                 break;
               }
-              case 1080: // .3 <- .1 ^ .2
+              case 1080: /* .3 <- .1 ^ .2 */
               {
                 if (0 == (variables->OneSpotsIgnored[0] & 8))
                   variables->OneSpots[3] = variables->OneSpots[1] ^ variables->OneSpots[2];
 
                 break;
               }
-              case 1500: // :3 <- :1 + :2
+              case 1500: /* :3 <- :1 + :2 */
               {
                 if (variables->TwoSpots[1] > ~variables->TwoSpots[2])
                   complain(0, "%s", "(1999)  DOUBLE OR SINGLE PRECISION OVERFLOW\n", 0, 0);
@@ -1043,7 +1047,7 @@ void interpret(StatementList program)
 
                 break;
               }
-              case 1509: // :3 <- unchecked(:1 + :2), :4 <- (overflow == false) ? #1 : #2
+              case 1509: /* :3 <- unchecked(:1 + :2), :4 <- (overflow == false) ? #1 : #2 */
               {
                 if (0 == (variables->TwoSpotsIgnored[0] & 16))
                   if (variables->TwoSpots[1] > ~variables->TwoSpots[2])
@@ -1056,35 +1060,35 @@ void interpret(StatementList program)
 
                 break;
               }
-              case 1510: // :3 <- :1 - :2
+              case 1510: /* :3 <- :1 - :2 */
               {
                 if (0 == (variables->TwoSpotsIgnored[0] & 8))
                   variables->TwoSpots[3] = variables->TwoSpots[1] - variables->TwoSpots[2];
 
                 break;
               }
-              case 1520: // :1 <- (.1 << 16) | .2
+              case 1520: /* :1 <- (.1 << 16) | .2 */
               {
                 if (0 == (variables->TwoSpotsIgnored[0] & 2))
                   variables->TwoSpots[1] = (variables->OneSpots[1] << 16) | variables->OneSpots[2];
 
                 break;
               }
-              case 1525: // ("undocumented") .3 <<= 8
+              case 1525: /* ("undocumented") .3 <<= 8 */
               {
                 if (0 == (variables->TwoSpotsIgnored[0] & 8))
                   variables->OneSpots[3] = variables->OneSpots[3] << 8;
 
                 break;
               }
-              case 1530: // :1 <- .1 * .2
+              case 1530: /* :1 <- .1 * .2 */
               {
                 if (0 == (variables->TwoSpotsIgnored[0] & 2))
                   variables->TwoSpots[1] = variables->OneSpots[1] * variables->OneSpots[2];
 
                 break;
               }
-              case 1540: // :3 <- :1 * :2
+              case 1540: /* :3 <- :1 * :2 */
               {
                 if (variables->OneSpots[1] > 0xFFFFu / variables->OneSpots[2])
                   complain(0, "%s", "(1999)  DOUBLE OR SINGLE PRECISION OVERFLOW\n", 0, 0);
@@ -1094,7 +1098,7 @@ void interpret(StatementList program)
 
                 break;
               }
-              case 1549: // :3 <- unchecked(:1 * :2), .4 <- (overflow == false) ? #1 : #2
+              case 1549: /* :3 <- unchecked(:1 * :2), .4 <- (overflow == false) ? #1 : #2 */
               {
                 if (0 == (variables->OneSpotsIgnored[0] & 16))
                   if (variables->OneSpots[1] > 0xFFFFFFFFu / variables->OneSpots[2])
@@ -1107,7 +1111,7 @@ void interpret(StatementList program)
 
                 break;
               }
-              case 1550: // :3 <- (:2 != 0) ? :1 / :2 : #0
+              case 1550: /* :3 <- (:2 != 0) ? :1 / :2 : #0 */
               {
                 if (0 == (variables->TwoSpotsIgnored[0] & 8))
                   if (variables->TwoSpots[2] != 0)
@@ -1117,7 +1121,7 @@ void interpret(StatementList program)
 
                 break;
               }
-              case 1900: // .1 <- uniform random no. from #0 to #65535
+              case 1900: /* .1 <- uniform random no. from #0 to #65535 */
               {
                 if (0 == (variables->OneSpotsIgnored[0] & 2))
                 {
@@ -1133,7 +1137,7 @@ void interpret(StatementList program)
 
                 break;
               }
-              case 1910: // .2 <- normal random no. from #0 to .1, with standard deviation .1 divided by #12
+              case 1910: /* .2 <- normal random no. from #0 to .1, with standard deviation .1 divided by #12 */
               {
                 int i;
 #if RAND_MAX > 0xFFFF
@@ -1154,6 +1158,9 @@ void interpret(StatementList program)
                 break;
               }
             }
+
+            break;
+          }
 
           if (call_depth == call_stack_size)
             if (strict_call_stack_size)
@@ -1807,7 +1814,7 @@ void interpret(StatementList program)
           break;
         }
         case StatementType_ComeFrom:
-          // do nothing; the action is handled at the suck point
+          /* do nothing; the action is handled at the suck point */
           break;
         default:
           explode("BAD LUCK SWITCH IN MODULE I-I");

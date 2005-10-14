@@ -97,6 +97,7 @@ typedef struct sImmediateExpression
 typedef enum eStatementType
 {
   StatementType_Bad,
+  StatementType_EndOfCodeModule,
   StatementType_Assignment,
   StatementType_Next,
   StatementType_Resume,
@@ -120,7 +121,8 @@ typedef struct sStatement
   int Probability;
   bool Polite;
   int ErrorCode;
-  int NextStatementRow; // for strict error message compatibility
+  int Row, Column;
+  int NextStatementRow; /* for strict error message compatibility */
   struct sStatementListNode *SuckPointDestination;
 } Statement;
 
@@ -141,6 +143,13 @@ typedef struct sBadStatement
 
   char *Text;
 } BadStatement;
+
+typedef struct sEndOfCodeModuleStatement
+{
+  Statement Statement;
+
+  char *ModuleName;
+} EndOfCodeModuleStatement;
 
 typedef struct sAssignmentStatement
 {
@@ -272,9 +281,9 @@ typedef struct sComeFromStatement
   ushort Label;
 } ComeFromStatement;
 
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
+/*///////////////////////////////////////////////////////////////////////////*/
+/*///////////////////////////////////////////////////////////////////////////*/
+/*///////////////////////////////////////////////////////////////////////////*/
 
 ExpressionList new_ExpressionList();
 void ExpressionList_Add(ExpressionList *list, Expression *item);
@@ -299,6 +308,7 @@ int StatementList_Count(StatementList *list);
 void StatementList_Unlink(StatementList *list, StatementListNode *node);
 Statement make_statement_header(int label, int probability, bool polite, int next_statement_row);
 BadStatement *new_BadStatement(Statement header, char *text);
+EndOfCodeModuleStatement *new_EndOfCodeModuleStatement(Statement header, char *module_name);
 AssignmentStatement *new_AssignmentStatement(Statement header, Expression *target, Expression *value);
 NextStatement *new_NextStatement(Statement header, ushort label);
 ResumeStatement *new_ResumeStatement(Statement header, Expression *count);
